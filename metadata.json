@@ -1,0 +1,6 @@
+{
+  "name": "University Tree",
+  "description": "India-wide University Tree educational repository for Previous Year Question Papers (PYQs), Solved Answer Keys, and Free Open E-Books with community contribution.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
