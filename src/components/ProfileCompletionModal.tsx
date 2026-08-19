@@ -16,8 +16,10 @@ import {
   ArrowRight,
   ShieldCheck,
   Check,
+  Briefcase,
 } from 'lucide-react';
 import { updateUserProfile, calculateProfileCompletion } from '../lib/storage';
+import { profileApi } from '../lib/api';
 
 interface ProfileCompletionModalProps {
   isOpen: boolean;
@@ -105,7 +107,7 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
     return calculateProfileCompletion(mock);
   }, [currentUser, fullName, email, dob, place, institution]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!fullName.trim()) {
@@ -116,13 +118,22 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       alert('Please enter a valid email address.');
       return;
     }
-    if (!dob) {
-      alert('Please select your Date of Birth (DOB).');
-      return;
-    }
     if (!place.trim()) {
       alert('Please enter your city / place.');
       return;
+    }
+
+    try {
+      // Send real update to Hostinger MySQL profile table
+      await profileApi.updateProfile({
+        name: fullName.trim(),
+        profession: course.trim() || 'Student',
+        address: `${place.trim()}, ${state}`,
+        city: place.trim(),
+        email: email.trim(),
+      });
+    } catch (apiErr) {
+      console.warn('Backend profile update note:', apiErr);
     }
 
     const updated = updateUserProfile(currentUser.id, {

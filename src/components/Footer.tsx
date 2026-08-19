@@ -113,6 +113,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenUpload }) => {
             <span className="hover:text-slate-600 cursor-pointer">Terms of Contribution</span>
             <span>•</span>
             <span className="hover:text-slate-600 cursor-pointer">Privacy Policy</span>
+            <span>•</span>
+            <button
+              onClick={() => onNavigate('admin')}
+              className="hover:text-slate-600 cursor-pointer transition-colors"
+              title="Admin Panel"
+            >
+              Admin
+            </button>
           </div>
         </div>
       </div>

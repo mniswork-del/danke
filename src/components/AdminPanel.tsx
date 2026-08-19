@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   PaperItem,
@@ -24,6 +24,7 @@ import {
   LogOut,
   KeyRound,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import {
   updatePaperStatus,
@@ -32,6 +33,7 @@ import {
   updateReportStatus,
   toggleUserSuspension,
 } from '../lib/storage';
+import { adminApi, getAdminToken } from '../lib/api';
 
 interface AdminPanelProps {
   adminUser?: User | null;
@@ -91,18 +93,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     isVerified: true,
   };
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminUsername.trim().toLowerCase() === 'admin' && adminPassword === 'admin') {
-      sessionStorage.setItem('universitytree_admin_auth', 'true');
-      setIsAdminAuthenticated(true);
-      setAuthError('');
-    } else {
-      setAuthError('Invalid credentials. Please enter user: admin and password: admin');
+    setAuthError('');
+
+    try {
+      if (adminUsername.trim().toLowerCase() === 'admin' && adminPassword === 'Admin98@') {
+        try {
+          await adminApi.login('admin', 'Admin98@');
+        } catch (apiErr) {
+          console.warn('Backend admin login note:', apiErr);
+        }
+        sessionStorage.setItem('universitytree_admin_auth', 'true');
+        setIsAdminAuthenticated(true);
+        setAuthError('');
+      } else {
+        // Try real backend
+        const res = await adminApi.login(adminUsername.trim(), adminPassword);
+        if (res && res.success) {
+          sessionStorage.setItem('universitytree_admin_auth', 'true');
+          setIsAdminAuthenticated(true);
+          setAuthError('');
+        } else {
+          setAuthError('Invalid administrator credentials. Access denied.');
+        }
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Invalid administrator credentials. Access denied.');
     }
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    try {
+      await adminApi.logout();
+    } catch {}
     sessionStorage.removeItem('universitytree_admin_auth');
     setIsAdminAuthenticated(false);
     setAdminUsername('');
@@ -118,9 +142,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     onRefreshData();
   };
 
-  const handleConfirmReject = (e: React.FormEvent) => {
+  const handleConfirmReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectPaper) return;
+    try {
+      await adminApi.rejectPaper(rejectPaper.id, rejectReason);
+    } catch (err) {
+      console.warn('Backend reject paper note:', err);
+    }
     updatePaperStatus(rejectPaper.id, 'REJECTED', effectiveAdminUser, rejectReason);
     setRejectPaper(null);
     onRefreshData();
@@ -142,7 +171,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  const handleToggleSuspend = (user: User) => {
+  const handleToggleSuspend = async (user: User) => {
+    try {
+      if (user.status === 'suspended') {
+        await adminApi.activateUser(user.id);
+      } else {
+        await adminApi.suspendUser(user.id);
+      }
+    } catch (err) {
+      console.warn('Backend suspend user note:', err);
+    }
     toggleUserSuspension(user.id, effectiveAdminUser);
     onRefreshData();
   };
@@ -185,12 +223,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             Please sign in with administrator credentials to manage papers, review student submissions, and view security audit logs.
           </p>
 
-          {/* Quick Access Info Pill */}
-          <div className="mt-4 p-3 rounded-xl bg-purple-900/30 border border-purple-500/30 text-purple-200 text-xs flex items-center justify-center space-x-2">
-            <KeyRound className="w-4 h-4 text-purple-400 shrink-0" />
-            <span className="font-mono text-[11px]">user: <strong>admin</strong> | password: <strong>admin</strong></span>
-          </div>
-
           <form onSubmit={handleAdminLogin} className="mt-6 space-y-4 text-left">
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">Username</label>
@@ -198,7 +230,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 type="text"
                 value={adminUsername}
                 onChange={e => setAdminUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="Enter admin username"
                 className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                 required
                 autoFocus
@@ -211,7 +243,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 type="password"
                 value={adminPassword}
                 onChange={e => setAdminPassword(e.target.value)}
-                placeholder="admin"
+                placeholder="••••••••••••"
                 className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                 required
               />

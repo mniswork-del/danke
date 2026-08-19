@@ -15,12 +15,8 @@ import {
   UserPlus,
   LogIn,
 } from 'lucide-react';
-import {
-  getUserByMobile,
-  saveRegisteredUserSession,
-  setCurrentUser,
-  getAllUsers,
-} from '../lib/storage';
+import { authApi } from '../lib/api';
+import { setCurrentUser } from '../lib/storage';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -36,7 +32,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [mode, setMode] = useState<'register' | 'login'>('register');
+  const [mode, setMode] = useState<'register' | 'login'>('login');
   
   // Registration & Login Form State
   const [phone, setPhone] = useState('');
@@ -59,7 +55,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setConfirmPassword('');
   };
 
-  // Handle New User Registration via Hostinger PHP Backend
+  // Handle New User Registration via Hostinger MySQL Backend API
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -67,7 +63,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     const cleanPhone = phone.replace(/\D/g, '').trim();
 
-    // Frontend Validations before calling API
     if (!cleanPhone) {
       setErrorMessage('Phone number cannot be empty.');
       return;
@@ -83,8 +78,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    if (password.length < 8) {
-      setErrorMessage('Password must contain at least 8 characters.');
+    if (password.length < 6) {
+      setErrorMessage('Password must contain at least 6 characters.');
       return;
     }
 
@@ -101,58 +96,50 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      // POST request to Hostinger PHP backend API
-      const response = await fetch('https://universitytree.in/api/register.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          password: password,
-          confirm_password: confirmPassword,
-        }),
-      });
-
-      let data: any = null;
-      try {
-        data = await response.json();
-      } catch (parseErr) {
-        throw new Error('Invalid response received from server.');
-      }
+      const data = await authApi.register(cleanPhone, password);
 
       if (data && data.success === true) {
-        setSuccessMessage(data.message || 'Account created successfully!');
+        setSuccessMessage('Account registered successfully!');
         
-        // Register session on client WITHOUT storing password in localStorage
-        const registeredUser = saveRegisteredUserSession({
-          id: data.user_id ? String(data.user_id) : `usr-${Date.now()}`,
+        const registeredUser: User = {
+          id: String(data.user?.id || Date.now()),
           mobile: cleanPhone,
-          name: `User ${cleanPhone.slice(-4)}`,
-          profileCompletionPercent: typeof data.profile_completion === 'number' ? data.profile_completion : 0,
-        });
+          name: data.user?.profile?.name || `User ${cleanPhone.slice(-4)}`,
+          city: data.user?.profile?.city || '',
+          email: data.user?.profile?.email || '',
+          profileCompleted: Boolean(data.user?.profile_completed),
+          role: 'student',
+          status: 'active',
+          otpVerified: true,
+          uploadedCount: 0,
+          approvedCount: 0,
+          rejectedCount: 0,
+          duplicateCount: 0,
+          pendingCount: 0,
+          totalViews: 0,
+          totalDownloads: 0,
+          totalEarned: 0,
+          pendingPayment: 0,
+          totalPaid: 0,
+          joinedDate: new Date().toISOString().split('T')[0],
+        };
+
+        setCurrentUser(registeredUser);
 
         setTimeout(() => {
           onLoginSuccess(registeredUser);
           onClose();
-        }, 600);
-      } else {
-        setErrorMessage(data?.message || 'Registration failed. Please check details and try again.');
+        }, 500);
       }
     } catch (err: any) {
-      setErrorMessage(
-        err?.message && err.message.includes('Invalid response')
-          ? 'Invalid response received from server. Please try again.'
-          : 'Network or server error. Please check your internet connection or try again.'
-      );
+      setErrorMessage(err?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   // Handle Login for Existing User
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
@@ -168,23 +155,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const existingUser = getUserByMobile(cleanPhone);
-    if (existingUser) {
-      // Log in existing user session without saving plain text password
-      const safeUser: User = {
-        ...existingUser,
-        otpVerified: true,
-      };
-      setCurrentUser(safeUser);
-      onLoginSuccess(safeUser);
-      onClose();
-    } else {
-      // If user not in local cache, log in and create safe session
-      const newUser = saveRegisteredUserSession({
-        mobile: cleanPhone,
-      });
-      onLoginSuccess(newUser);
-      onClose();
+    setIsLoading(true);
+
+    try {
+      const data = await authApi.login(cleanPhone, password);
+
+      if (data && data.success === true) {
+        setSuccessMessage('Logged in successfully!');
+
+        const loggedInUser: User = {
+          id: String(data.user.id),
+          mobile: cleanPhone,
+          name: data.user.name || data.user.profile?.name || `User ${cleanPhone.slice(-4)}`,
+          city: data.user.profile?.city || '',
+          email: data.user.profile?.email || '',
+          profileCompleted: Boolean(data.user.profile_completed),
+          role: 'student',
+          status: data.user.status || 'active',
+          otpVerified: true,
+          uploadedCount: 0,
+          approvedCount: 0,
+          rejectedCount: 0,
+          duplicateCount: 0,
+          pendingCount: 0,
+          totalViews: 0,
+          totalDownloads: 0,
+          totalEarned: 0,
+          pendingPayment: 0,
+          totalPaid: 0,
+          joinedDate: data.user.created_at ? new Date(data.user.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        };
+
+        setCurrentUser(loggedInUser);
+
+        setTimeout(() => {
+          onLoginSuccess(loggedInUser);
+          onClose();
+        }, 400);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Invalid phone number or password.');
+    } finally {
+      setIsLoading(false);
     }
   };
 

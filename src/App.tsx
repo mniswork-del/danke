@@ -13,6 +13,7 @@ import {
   initStorage,
   calculateProfileCompletion,
 } from './lib/storage';
+import { authApi, paperApi } from './lib/api';
 
 // Component Imports
 import { Navbar } from './components/Navbar';
@@ -32,8 +33,6 @@ import { AuthModal } from './components/AuthModal';
 import { ProfileCompletionModal } from './components/ProfileCompletionModal';
 import { ReportModal } from './components/ReportModal';
 import { Footer } from './components/Footer';
-import { WhatsAppFloatingButton } from './components/WhatsAppFloatingButton';
-import { SupportFloatingButton } from './components/SupportFloatingButton';
 
 export default function App() {
   const [currentUser, setCurrentUserState] = useState<User | null>(() => getCurrentUser());
@@ -66,8 +65,8 @@ export default function App() {
   // Initial Selected category from Path Finder
   const [selectedCatalogCategory, setSelectedCatalogCategory] = useState<any>(null);
 
-  // Sync state from storage
-  const refreshAppData = () => {
+  // Sync state from storage and backend
+  const refreshAppData = async () => {
     initStorage();
     setPapers(getAllPapers());
     setEbooks(getAllEBooks());
@@ -77,6 +76,47 @@ export default function App() {
     setReports(getAllReports());
     setAuditLogs(getAuditLogs());
     setCurrentUserState(getCurrentUser());
+
+    // Fetch live papers from backend
+    try {
+      const livePapers = await paperApi.getPapers();
+      if (livePapers && livePapers.length > 0) {
+        setPapers(livePapers);
+      }
+    } catch (e) {
+      console.warn('Paper fetch note:', e);
+    }
+
+    // Verify session
+    try {
+      const me = await authApi.getMe();
+      if (me) {
+        const syncedUser: User = {
+          id: String(me.id),
+          mobile: me.phone_number,
+          name: me.profile?.name || me.name || `User ${me.phone_number.slice(-4)}`,
+          city: me.profile?.city || '',
+          email: me.profile?.email || '',
+          profileCompleted: Boolean(me.profile_completed),
+          role: 'student',
+          status: me.status,
+          otpVerified: true,
+          uploadedCount: 0,
+          approvedCount: 0,
+          rejectedCount: 0,
+          duplicateCount: 0,
+          pendingCount: 0,
+          totalViews: 0,
+          totalDownloads: 0,
+          totalEarned: 0,
+          pendingPayment: 0,
+          totalPaid: 0,
+          joinedDate: me.created_at ? new Date(me.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        };
+        setCurrentUser(syncedUser);
+        setCurrentUserState(syncedUser);
+      }
+    } catch {}
   };
 
   useEffect(() => {
@@ -254,6 +294,26 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'dashboard' && !currentUser && (
+          <div className="max-w-md mx-auto my-16 bg-white rounded-3xl p-8 border border-slate-200 text-center shadow-xl">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-4 font-bold">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">Student Dashboard</h2>
+            <p className="text-sm text-slate-600 mb-6">
+              You are currently browsing as a guest. Please log in or create an account to view your uploaded papers and track contributions.
+            </p>
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-sm shadow-md transition-all cursor-pointer"
+            >
+              Login or Register
+            </button>
+          </div>
+        )}
+
         {/* Tab 8: Admin Panel (/admin) */}
         {activeTab === 'admin' && (
           <AdminPanel
@@ -322,15 +382,6 @@ export default function App() {
         isOpen={!!reportingPaper}
         onClose={() => setReportingPaper(null)}
       />
-
-      {/* Floating Support & Help Center */}
-      <SupportFloatingButton
-        onOpenSupportPage={() => navigateToTab('support')}
-        onOpenUpload={() => setIsUploadOpen(true)}
-      />
-
-      {/* Floating WhatsApp Support Helpdesk */}
-      <WhatsAppFloatingButton />
     </div>
   );
 }

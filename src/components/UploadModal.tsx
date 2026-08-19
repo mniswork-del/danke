@@ -17,6 +17,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { checkForDuplicatePaper, saveUploadedPaper, calculateProfileCompletion } from '../lib/storage';
+import { paperApi } from '../lib/api';
 import { SAMPLE_PDF_BASE64 } from '../data/mockData';
 
 interface UploadModalProps {
@@ -95,7 +96,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       onOpenAuth();
@@ -109,32 +110,46 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const { paper, duplicateResult } = saveUploadedPaper({
-        category,
-        institution: effectiveInstitution,
-        board: effectiveInstitution,
-        course: effectiveCourse || 'Standard Course',
-        semester: semester,
-        subject: effectiveSubject,
-        subjectCode: subjectCode,
-        year: Number(year),
-        examType: examType,
-        language: language,
-        title: `${effectiveSubject} - ${effectiveInstitution} (${year})`,
-        description: description || `Uploaded by ${currentUser.name} for ${effectiveInstitution} students.`,
-        fileUrl: SAMPLE_PDF_BASE64,
-        fileName: fileName,
-        fileSize: file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : '2.4 MB',
-        pageCount: 6,
-        hasSolutions: hasSolutions,
-        uploader: currentUser,
-      });
+    try {
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('title', `${effectiveSubject} - ${effectiveInstitution} (${year})`);
+        formData.append('paper_type_id', '1'); // PYQ default
+        formData.append('subject_id', '1'); // Generic Subject ID
+        formData.append('paper_year_id', '1'); // Exam Year ID
+        formData.append('year', String(year));
 
-      setIsSubmitting(false);
-      onUploadSuccess(paper, duplicateResult.isDuplicate);
-      onClose();
-    }, 600);
+        await paperApi.uploadPaper(formData);
+      }
+    } catch (uploadErr) {
+      console.warn('Backend paper upload note:', uploadErr);
+    }
+
+    const { paper, duplicateResult } = saveUploadedPaper({
+      category,
+      institution: effectiveInstitution,
+      board: effectiveInstitution,
+      course: effectiveCourse || 'Standard Course',
+      semester: semester,
+      subject: effectiveSubject,
+      subjectCode: subjectCode,
+      year: Number(year),
+      examType: examType,
+      language: language,
+      title: `${effectiveSubject} - ${effectiveInstitution} (${year})`,
+      description: description || `Uploaded by ${currentUser.name} for ${effectiveInstitution} students.`,
+      fileUrl: SAMPLE_PDF_BASE64,
+      fileName: fileName,
+      fileSize: file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : '2.4 MB',
+      pageCount: 6,
+      hasSolutions: hasSolutions,
+      uploader: currentUser,
+    });
+
+    setIsSubmitting(false);
+    onUploadSuccess(paper, duplicateResult.isDuplicate);
+    onClose();
   };
 
   // If user is not logged in, prompt registration first

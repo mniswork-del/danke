@@ -203,11 +203,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onOpenAuth}
                 id="login-header-btn"
-                className="w-11 h-11 rounded-full border border-slate-300 hover:border-emerald-600 bg-slate-50 hover:bg-emerald-50/60 text-slate-700 hover:text-emerald-700 transition-all flex items-center justify-center cursor-pointer shadow-2xs group"
-                title="Student Account / Login"
-                aria-label="Student Account / Login"
+                className="w-11 h-11 rounded-full border border-slate-200 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 transition-all flex items-center justify-center cursor-pointer shadow-2xs group"
+                title="Login / Register"
+                aria-label="Login or Register"
               >
-                <UserIcon className="w-5 h-5 transition-transform group-hover:scale-110" />
+                <UserIcon className="w-5 h-5 text-slate-600 group-hover:text-emerald-700 transition-transform group-hover:scale-110" />
               </button>
             )}
 
@@ -337,8 +337,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onOpenAuth}
               className="w-9 h-9 rounded-full border border-slate-300 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 flex items-center justify-center cursor-pointer shadow-2xs"
-              title="Student Account / Login"
-              aria-label="Student Account / Login"
+              title="Login / Register"
+              aria-label="Login or Register"
             >
               <UserIcon className="w-4 h-4" />
             </button>
