@@ -33,6 +33,7 @@ import { ProfileCompletionModal } from './components/ProfileCompletionModal';
 import { ReportModal } from './components/ReportModal';
 import { Footer } from './components/Footer';
 import { WhatsAppFloatingButton } from './components/WhatsAppFloatingButton';
+import { SupportFloatingButton } from './components/SupportFloatingButton';
 
 export default function App() {
   const [currentUser, setCurrentUserState] = useState<User | null>(() => getCurrentUser());
@@ -320,6 +321,12 @@ export default function App() {
         paper={reportingPaper}
         isOpen={!!reportingPaper}
         onClose={() => setReportingPaper(null)}
+      />
+
+      {/* Floating Support & Help Center */}
+      <SupportFloatingButton
+        onOpenSupportPage={() => navigateToTab('support')}
+        onOpenUpload={() => setIsUploadOpen(true)}
       />
 
       {/* Floating WhatsApp Support Helpdesk */}
