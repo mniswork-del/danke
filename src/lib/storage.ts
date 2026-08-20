@@ -204,14 +204,20 @@ export function saveRegisteredUserSession(user: Partial<User> & { mobile: string
   const existingIndex = users.findIndex(u => u.mobile && u.mobile.replace(/\D/g, '').slice(-10) === cleanMob);
   const existing = existingIndex >= 0 ? users[existingIndex] : null;
 
+  const isGenericName = (n?: string) => !n || n.trim().startsWith('User ') || n.trim().startsWith('Student ');
+
+  const resolvedName = !isGenericName(user.name) 
+    ? (user.name || '').trim() 
+    : (!isGenericName(existing?.name) ? (existing?.name || '').trim() : (user.name || existing?.name || `User ${cleanMob.slice(-4)}`));
+
   const merged: User = {
     id: user.id || existing?.id || `usr-${Date.now()}`,
     mobile: cleanMob,
-    name: user.name || existing?.name || `User ${cleanMob.slice(-4)}`,
+    name: resolvedName,
     email: user.email || existing?.email || '',
     dob: user.dob || existing?.dob || '',
-    place: user.place || existing?.place || existing?.city || '',
-    city: user.city || existing?.city || user.place || existing?.place || '',
+    place: user.place || user.city || existing?.place || existing?.city || '',
+    city: user.city || user.place || existing?.city || existing?.place || '',
     state: user.state || existing?.state || 'Uttar Pradesh',
     educationCategory: user.educationCategory || existing?.educationCategory || 'college',
     institution: user.institution || existing?.institution || '',
@@ -219,7 +225,7 @@ export function saveRegisteredUserSession(user: Partial<User> & { mobile: string
     preferredSubjects: user.preferredSubjects || existing?.preferredSubjects || [],
     avatarUrl: user.avatarUrl || existing?.avatarUrl || '',
     payoutUpiId: user.payoutUpiId || existing?.payoutUpiId || '',
-    payoutAccountName: user.payoutAccountName || existing?.payoutAccountName || user.name || existing?.name || '',
+    payoutAccountName: user.payoutAccountName || existing?.payoutAccountName || resolvedName,
     otpVerified: true,
     profileCompleted: user.profileCompleted ?? existing?.profileCompleted ?? false,
     profileCompletionPercent: typeof user.profileCompletionPercent === 'number' ? user.profileCompletionPercent : (existing?.profileCompletionPercent || 0),

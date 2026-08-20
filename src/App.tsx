@@ -142,11 +142,16 @@ export default function App() {
       const me = await authApi.getMe();
       if (me) {
         const localCurrent = getCurrentUser();
+        const isGeneric = (n?: string) => !n || n.trim().startsWith('User ') || n.trim().startsWith('Student ');
+        const resolvedName = !isGeneric(me.profile?.name)
+          ? me.profile.name
+          : (!isGeneric(localCurrent?.name) ? localCurrent?.name : (me.name || localCurrent?.name || `User ${me.phone_number.slice(-4)}`));
+
         const syncedUser: User = {
           ...(localCurrent || {}),
-          id: String(me.id),
-          mobile: me.phone_number,
-          name: me.profile?.name || me.name || localCurrent?.name || `User ${me.phone_number.slice(-4)}`,
+          id: String(me.id || localCurrent?.id || Date.now()),
+          mobile: me.phone_number || localCurrent?.mobile || '',
+          name: resolvedName,
           city: me.profile?.city || localCurrent?.city || localCurrent?.place || '',
           place: me.profile?.city || localCurrent?.place || localCurrent?.city || '',
           email: me.profile?.email || localCurrent?.email || '',
@@ -156,10 +161,10 @@ export default function App() {
           institution: localCurrent?.institution || (me.profile?.profession ? me.profile.profession : ''),
           course: localCurrent?.course || (me.profile?.profession ? me.profile.profession : ''),
           payoutUpiId: localCurrent?.payoutUpiId || '',
-          payoutAccountName: localCurrent?.payoutAccountName || me.profile?.name || '',
+          payoutAccountName: localCurrent?.payoutAccountName || resolvedName,
           profileCompleted: Boolean(me.profile_completed) || Boolean(localCurrent?.profileCompleted),
           role: 'student',
-          status: me.status,
+          status: me.status || 'active',
           otpVerified: true,
           uploadedCount: localCurrent?.uploadedCount || 0,
           approvedCount: localCurrent?.approvedCount || 0,

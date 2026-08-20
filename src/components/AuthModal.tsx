@@ -176,10 +176,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         const userObj = data.user || {};
         const profileObj = userObj.profile || {};
         
-        const loggedInUser: User = {
+        const loggedInUser: Partial<User> & { mobile: string } = {
           id: String(userObj.id || Date.now()),
           mobile: cleanPhone,
-          name: profileObj.name || userObj.name || `User ${cleanPhone.slice(-4)}`,
+          name: profileObj.name || userObj.name || '',
           city: profileObj.city || userObj.city || '',
           place: profileObj.city || profileObj.address || '',
           email: profileObj.email || userObj.email || '',
@@ -189,16 +189,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           role: 'student',
           status: userObj.status || 'active',
           otpVerified: true,
-          uploadedCount: 0,
-          approvedCount: 0,
-          rejectedCount: 0,
-          duplicateCount: 0,
-          pendingCount: 0,
-          totalViews: 0,
-          totalDownloads: 0,
-          totalEarned: 0,
-          pendingPayment: 0,
-          totalPaid: 0,
           joinedDate: userObj.created_at ? new Date(userObj.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, PaperItem, EducationCategory } from '../types';
 import { PATH_CATEGORIES } from '../data/categoriesData';
 import {
@@ -41,9 +41,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'uploads' | 'profile'>('uploads');
 
   // Profile Form States
-  const [fullName, setFullName] = useState(
-    currentUser.name && !currentUser.name.startsWith('Student ') ? currentUser.name : ''
-  );
+  const [fullName, setFullName] = useState(currentUser.name || '');
   const [email, setEmail] = useState(currentUser.email || '');
   const [dob, setDob] = useState(currentUser.dob || '');
   const [place, setPlace] = useState(currentUser.place || currentUser.city || '');
@@ -54,6 +52,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const [institution, setInstitution] = useState(currentUser.institution || '');
   const [course, setCourse] = useState(currentUser.course || '');
   const [profileSaved, setProfileSaved] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setFullName(currentUser.name || '');
+      setEmail(currentUser.email || '');
+      setDob(currentUser.dob || '');
+      setPlace(currentUser.place || currentUser.city || '');
+      setState(currentUser.state || 'Uttar Pradesh');
+      setCategory((currentUser.educationCategory as EducationCategory) || 'college');
+      setInstitution(currentUser.institution || '');
+      setCourse(currentUser.course || '');
+    }
+  }, [currentUser]);
 
   // My uploaded papers
   const myPapers = allPapers.filter(p => p.uploaderId === currentUser.id);
