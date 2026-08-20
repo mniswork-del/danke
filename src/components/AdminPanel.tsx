@@ -86,18 +86,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [dbStatus, setDbStatus] = useState<{
     connected: boolean;
     mode: string;
-    databases: Array<{ name: string; status: string; records: any }>;
+    host?: string;
+    lastError?: string | null;
+    databases: Array<{ name: string; status: string; records: any; description?: string }>;
   }>({
-    connected: true,
+    connected: false,
     mode: 'ready',
+    host: '',
+    lastError: null,
     databases: [
-      { name: 'u913393473_users', status: 'ready', records: allUsers.length },
-      { name: 'u913393473_admin', status: 'ready', records: 1 },
-      { name: 'u913393473_papers', status: 'ready', records: allPapers.length },
+      { name: 'u913393473_users', status: 'ready', records: allUsers.length, description: 'User Accounts, Auth & Profiles' },
+      { name: 'u913393473_admin', status: 'ready', records: 1, description: 'Admin Moderation & Security Logs' },
+      { name: 'u913393473_papers', status: 'ready', records: allPapers.length, description: 'PYQs, Answer Keys & E-Books' },
     ],
   });
 
-  useEffect(() => {
+  const [isReconnectingDb, setIsReconnectingDb] = useState(false);
+  const [reconnectResult, setReconnectResult] = useState<{ success: boolean; message: string; advice?: string } | null>(null);
+
+  const fetchDbHealth = () => {
     fetch('/api/health')
       .then(res => res.json())
       .then(data => {
@@ -106,7 +113,41 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         }
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchDbHealth();
   }, [allUsers.length, allPapers.length]);
+
+  const handleTestReconnectOriginDb = async () => {
+    setIsReconnectingDb(true);
+    setReconnectResult(null);
+    try {
+      const res = await fetch('/api/admin/reconnect-db', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setReconnectResult({
+          success: true,
+          message: data.message || 'Connected to origin Hostinger MySQL database!',
+        });
+      } else {
+        setReconnectResult({
+          success: false,
+          message: data.error || 'Failed to connect to origin database.',
+          advice: data.advice || 'Make sure Remote MySQL is enabled in Hostinger cPanel with IP or % wildcard.',
+        });
+      }
+      fetchDbHealth();
+    } catch (err: any) {
+      setReconnectResult({
+        success: false,
+        message: err.message || 'Network error while testing origin database.',
+        advice: 'Ensure database port 3306 is reachable and remote MySQL is allowed on Hostinger.',
+      });
+    } finally {
+      setIsReconnectingDb(false);
+    }
+  };
 
   // Effective Admin User Profile for audit logs
   const effectiveAdminUser: User = adminUser || {
@@ -375,15 +416,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-5 sm:p-6 text-white mb-6 border border-slate-700 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/80">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold border ${
+              dbStatus.connected 
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+            }`}>
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-sm sm:text-base font-black text-white">Database Engine: Ready & Operational</h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider flex items-center space-x-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>ONLINE</span>
+                <h2 className="text-sm sm:text-base font-black text-white">
+                  Database Engine: {dbStatus.connected ? 'Origin Hostinger MySQL' : 'Integrated High-Performance Engine'}
+                </h2>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center space-x-1 border ${
+                  dbStatus.connected 
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                    : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${dbStatus.connected ? 'bg-emerald-400' : 'bg-indigo-400'} animate-pulse`} />
+                  <span>{dbStatus.connected ? 'LIVE MYSQL' : 'ONLINE & ACTIVE'}</span>
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 mt-0.5">
@@ -393,17 +444,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-[11px] font-mono bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700 text-slate-300">
-              Hostinger Multi-DB Architecture
-            </span>
+            <button
+              onClick={handleTestReconnectOriginDb}
+              disabled={isReconnectingDb}
+              className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isReconnectingDb ? 'animate-spin' : ''}`} />
+              <span>{isReconnectingDb ? 'Testing Connection...' : 'Test & Sync Origin DB'}</span>
+            </button>
           </div>
         </div>
+
+        {reconnectResult && (
+          <div className={`mt-4 p-3.5 rounded-2xl border text-xs ${
+            reconnectResult.success 
+              ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200' 
+              : 'bg-slate-800/80 border-indigo-400/40 text-slate-200'
+          }`}>
+            <div className="font-bold flex items-center space-x-2">
+              <span>{reconnectResult.success ? '✅' : 'ℹ️'}</span>
+              <span>{reconnectResult.message}</span>
+            </div>
+            {reconnectResult.advice && (
+              <p className="text-[11px] text-slate-300 mt-1 pl-6">
+                💡 <span className="font-semibold">Note:</span> {reconnectResult.advice}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
           <div className="bg-slate-800/60 rounded-2xl p-3.5 border border-slate-700/60">
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
               <span>Users DB</span>
-              <span className="text-emerald-400 text-[10px] font-bold">● Active</span>
+              <span className="text-emerald-400 text-[10px] font-bold">● {dbStatus.connected ? 'MySQL Live' : 'Active'}</span>
             </div>
             <div className="text-xs font-bold text-white font-mono mt-1">u913393473_users</div>
             <div className="text-[10px] text-slate-400 mt-1">Auth, Phone, Profiles & Sessions ({allUsers.length} users)</div>
@@ -412,7 +486,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="bg-slate-800/60 rounded-2xl p-3.5 border border-slate-700/60">
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
               <span>Admin DB</span>
-              <span className="text-emerald-400 text-[10px] font-bold">● Active</span>
+              <span className="text-emerald-400 text-[10px] font-bold">● {dbStatus.connected ? 'MySQL Live' : 'Active'}</span>
             </div>
             <div className="text-xs font-bold text-white font-mono mt-1">u913393473_admin</div>
             <div className="text-[10px] text-slate-400 mt-1">Role Auth, Activity Logs & Security Sessions</div>
@@ -421,7 +495,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="bg-slate-800/60 rounded-2xl p-3.5 border border-slate-700/60">
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
               <span>Papers Repository DB</span>
-              <span className="text-emerald-400 text-[10px] font-bold">● Active</span>
+              <span className="text-emerald-400 text-[10px] font-bold">● {dbStatus.connected ? 'MySQL Live' : 'Active'}</span>
             </div>
             <div className="text-xs font-bold text-white font-mono mt-1">u913393473_papers</div>
             <div className="text-[10px] text-slate-400 mt-1">PYQs, Answer Keys, E-Books ({allPapers.length} items)</div>

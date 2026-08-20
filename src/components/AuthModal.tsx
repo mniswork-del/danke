@@ -61,7 +61,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMessage('');
     setSuccessMessage('');
 
-    const cleanPhone = phone.replace(/\D/g, '').trim();
+    let cleanPhone = phone.replace(/\D/g, '').trim();
+    if (cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.slice(-10);
+    }
 
     if (!cleanPhone) {
       setErrorMessage('Phone number cannot be empty.');
@@ -145,7 +148,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMessage('');
     setSuccessMessage('');
 
-    const cleanPhone = phone.replace(/\D/g, '').trim();
+    let cleanPhone = phone.replace(/\D/g, '').trim();
+    if (cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.slice(-10);
+    }
+
     if (!cleanPhone || cleanPhone.length !== 10) {
       setErrorMessage('Please enter a valid 10-digit mobile number.');
       return;
@@ -187,6 +194,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           joinedDate: data.user.created_at ? new Date(data.user.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         };
 
+        saveRegisteredUserSession(loggedInUser);
         setCurrentUser(loggedInUser);
 
         setTimeout(() => {
@@ -296,11 +304,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="tel"
                   id="register-phone-input"
-                  maxLength={10}
+                  maxLength={15}
                   value={phone}
                   onChange={e => {
                     setErrorMessage('');
-                    setPhone(e.target.value.replace(/\D/g, ''));
+                    const raw = e.target.value.replace(/\D/g, '');
+                    setPhone(raw.length > 10 ? raw.slice(-10) : raw);
                   }}
                   placeholder="98765 43210"
                   className="w-full px-3.5 py-3 text-sm font-bold text-slate-900 bg-transparent focus:outline-hidden tracking-wider"
@@ -423,11 +432,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="tel"
                   id="login-phone-input"
-                  maxLength={10}
+                  maxLength={15}
                   value={phone}
                   onChange={e => {
                     setErrorMessage('');
-                    setPhone(e.target.value.replace(/\D/g, ''));
+                    const raw = e.target.value.replace(/\D/g, '');
+                    setPhone(raw.length > 10 ? raw.slice(-10) : raw);
                   }}
                   placeholder="98765 43210"
                   className="w-full px-3.5 py-3 text-sm font-bold text-slate-900 bg-transparent focus:outline-hidden tracking-wider"

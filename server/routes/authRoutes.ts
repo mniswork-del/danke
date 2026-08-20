@@ -14,8 +14,11 @@ authRouter.post(['/register', '/register.php'], async (req: AuthRequest, res: Re
       return res.status(400).json({ success: false, error: 'Please provide phone number and password.' });
     }
 
-    const cleanPhone = String(phone_number).trim().replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
+    let cleanPhone = String(phone_number).trim().replace(/\D/g, '');
+    if (cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.slice(-10);
+    }
+    if (cleanPhone.length !== 10) {
       return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit mobile number.' });
     }
 
@@ -145,7 +148,13 @@ authRouter.post(['/login', '/login.php'], async (req: AuthRequest, res: Response
       return res.status(400).json({ success: false, error: 'Please enter both phone number and password.' });
     }
 
-    const cleanPhone = String(phone_number).trim().replace(/\D/g, '');
+    let cleanPhone = String(phone_number).trim().replace(/\D/g, '');
+    if (cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.slice(-10);
+    }
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit mobile number.' });
+    }
 
     if (isDbConnected() && userPool) {
       const [rows]: any = await userPool.query('SELECT * FROM users WHERE phone_number = ?', [cleanPhone]);

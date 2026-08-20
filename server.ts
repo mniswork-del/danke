@@ -1,10 +1,11 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { createServer as createViteServer } from 'vite';
-import { initializeDatabases, getDbInfo } from './server/db';
+import { initializeDatabases, getDbInfo, testOriginConnection } from './server/db';
 import { authRouter } from './server/routes/authRoutes';
 import { profileRouter } from './server/routes/profileRoutes';
 import { paperRouter } from './server/routes/paperRoutes';
@@ -39,6 +40,12 @@ async function startServer() {
     });
   });
 
+  // Dedicated DB test & reconnect endpoint
+  app.post('/api/admin/reconnect-db', async (req, res) => {
+    const result = await testOriginConnection();
+    res.json(result);
+  });
+
   // API Routes
   app.use('/api/auth', authRouter);
   app.use('/api/profile', profileRouter);
@@ -49,11 +56,11 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: 'spa',
+      appType: 'custom',
     });
     app.use(vite.middlewares);
 
-    // SPA fallback in development mode for direct URL requests (e.g. /papers, /admin, /ebooks)
+    // SPA fallback in development mode for direct URL requests (e.g. /papers, /admin, /ebooks, /dashboard)
     app.use('*', async (req, res, next) => {
       // Ignore API routes if unmatched
       if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
@@ -73,6 +80,9 @@ async function startServer() {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
+      if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
+        return res.status(404).json({ error: 'Not found' });
+      }
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
