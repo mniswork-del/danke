@@ -54,7 +54,7 @@ const upload = multer({
 });
 
 // GET /api/paper-types
-paperRouter.get('/paper-types', async (req, res) => {
+paperRouter.get(['/paper-types', '/paper-types.php'], async (req, res) => {
   try {
     if (isDbConnected() && papersPool) {
       const [rows] = await papersPool.query('SELECT * FROM paper_types ORDER BY id ASC');
@@ -67,7 +67,7 @@ paperRouter.get('/paper-types', async (req, res) => {
 });
 
 // GET /api/subjects
-paperRouter.get('/subjects', async (req, res) => {
+paperRouter.get(['/subjects', '/subjects.php'], async (req, res) => {
   try {
     if (isDbConnected() && papersPool) {
       const [rows] = await papersPool.query('SELECT * FROM subjects ORDER BY name ASC');
@@ -80,7 +80,7 @@ paperRouter.get('/subjects', async (req, res) => {
 });
 
 // GET /api/years
-paperRouter.get('/years', async (req, res) => {
+paperRouter.get(['/years', '/years.php'], async (req, res) => {
   try {
     if (isDbConnected() && papersPool) {
       const [rows] = await papersPool.query('SELECT * FROM paper_years ORDER BY year DESC');
@@ -92,8 +92,8 @@ paperRouter.get('/years', async (req, res) => {
   }
 });
 
-// GET /api/papers (Public live papers with filters)
-paperRouter.get('/papers', optionalUserAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/papers, /api/papers/list, /api/papers/list.php
+paperRouter.get(['/papers', '/papers/list', '/papers/list.php'], optionalUserAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { search, type_id, subject_id, year_id, category, sort } = req.query;
 
@@ -315,8 +315,8 @@ paperRouter.get('/user/papers', requireUserAuth, async (req: AuthRequest, res: R
   }
 });
 
-// POST /api/papers/upload (Multipart upload with file and metadata)
-paperRouter.post('/upload', requireUserAuth, upload.single('file'), async (req: AuthRequest, res: Response) => {
+// POST /api/upload, /api/papers/upload, /api/papers/upload.php
+paperRouter.post(['/upload', '/papers/upload', '/papers/upload.php'], requireUserAuth, upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
 
@@ -475,5 +475,68 @@ paperRouter.post('/upload', requireUserAuth, upload.single('file'), async (req: 
   } catch (err: any) {
     console.error('Paper Upload Error:', err);
     return res.status(500).json({ success: false, error: err.message || 'Upload failed. Please try again.' });
+  }
+});
+
+// GET /api/papers/view, /api/papers/view.php
+paperRouter.get(['/papers/view', '/papers/view.php'], async (req, res) => {
+  try {
+    const id = req.query.id;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Paper ID is required.' });
+    }
+
+    if (isDbConnected() && papersPool) {
+      const [rows]: any = await papersPool.query(
+        `SELECT pf.*, pt.name as paper_type_name, pt.code as paper_type_code, s.name as subject_name, s.category as subject_category, py.year as exam_year
+         FROM paper_files pf
+         LEFT JOIN paper_types pt ON pf.paper_type_id = pt.id
+         LEFT JOIN subjects s ON pf.subject_id = s.id
+         LEFT JOIN paper_years py ON pf.paper_year_id = py.id
+         WHERE pf.id = ?`,
+        [id]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Paper not found.' });
+      }
+      const r = rows[0];
+      await papersPool.query('UPDATE paper_files SET views_count = views_count + 1 WHERE id = ?', [id]);
+      return res.json({
+        success: true,
+        paper: {
+          id: String(r.id),
+          title: r.title,
+          type: r.paper_type_code || 'pyq',
+          subject: r.subject_name,
+          year: r.exam_year,
+          fileUrl: r.file_path,
+          fileName: r.original_filename,
+          fileSize: `${(r.file_size / (1024 * 1024)).toFixed(1)} MB`,
+          status: r.status,
+          viewsCount: (r.views_count || 0) + 1,
+          downloadsCount: r.downloads_count || 0,
+        },
+      });
+    } else {
+      const p = fallbackStore.papersDb.paper_files.find(item => String(item.id) === String(id));
+      if (!p) {
+        return res.status(404).json({ success: false, error: 'Paper not found.' });
+      }
+      p.views_count = (p.views_count || 0) + 1;
+      return res.json({
+        success: true,
+        paper: {
+          id: String(p.id),
+          title: p.title,
+          fileUrl: p.file_path,
+          fileName: p.original_filename,
+          fileSize: `${(p.file_size / (1024 * 1024)).toFixed(1)} MB`,
+          status: p.status,
+          viewsCount: p.views_count,
+        },
+      });
+    }
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: 'Failed to retrieve paper details.' });
   }
 });

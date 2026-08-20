@@ -30,8 +30,8 @@ async function logAdminAction(adminId: number, targetType: string, targetId: str
   }
 }
 
-// POST /api/admin/login
-adminRouter.post('/login', async (req: AuthRequest, res: Response) => {
+// POST /api/admin/login & /api/admin/login.php
+adminRouter.post(['/login', '/login.php'], async (req: AuthRequest, res: Response) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string;
   try {
     const { username, password } = req.body;
@@ -121,8 +121,8 @@ adminRouter.post('/login', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/admin/logout
-adminRouter.post('/logout', requireAdminAuth, async (req: AuthRequest, res: Response) => {
+// POST /api/admin/logout & /api/admin/logout.php
+adminRouter.post(['/logout', '/logout.php'], requireAdminAuth, async (req: AuthRequest, res: Response) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string;
   if (req.admin) {
     await logAdminAction(req.admin.id, 'system', String(req.admin.id), 'LOGOUT', `Admin ${req.admin.username} logged out`, ip);
@@ -131,13 +131,13 @@ adminRouter.post('/logout', requireAdminAuth, async (req: AuthRequest, res: Resp
   return res.json({ success: true, message: 'Logged out of admin panel.' });
 });
 
-// GET /api/admin/me
-adminRouter.get('/me', requireAdminAuth, (req: AuthRequest, res: Response) => {
+// GET /api/admin/me & /api/admin/me.php
+adminRouter.get(['/me', '/me.php'], requireAdminAuth, (req: AuthRequest, res: Response) => {
   return res.json({ success: true, admin: req.admin });
 });
 
-// GET /api/admin/dashboard
-adminRouter.get('/dashboard', requireAdminAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/admin/dashboard & /api/admin/dashboard.php
+adminRouter.get(['/dashboard', '/dashboard.php'], requireAdminAuth, async (req: AuthRequest, res: Response) => {
   try {
     if (isDbConnected() && userPool && papersPool) {
       // 1. User stats from u913393473_users
@@ -230,8 +230,8 @@ adminRouter.get('/dashboard', requireAdminAuth, async (req: AuthRequest, res: Re
   }
 });
 
-// GET /api/admin/users (List of all users with profile status and real paper counts)
-adminRouter.get('/users', requireAdminAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/admin/users & /api/admin/users.php
+adminRouter.get(['/users', '/users.php'], requireAdminAuth, async (req: AuthRequest, res: Response) => {
   try {
     if (isDbConnected() && userPool && papersPool) {
       const [users]: any = await userPool.query(`
@@ -391,8 +391,8 @@ adminRouter.get('/users/:id/papers', requireAdminAuth, async (req: AuthRequest, 
   }
 });
 
-// GET /api/admin/papers (All papers with date filters and status)
-adminRouter.get('/papers', requireAdminAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/admin/papers & /api/admin/papers.php
+adminRouter.get(['/papers', '/papers.php'], requireAdminAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { date_filter, status, subject_id, year_id, type_id, search, start_date, end_date } = req.query;
 
@@ -440,11 +440,11 @@ adminRouter.get('/papers', requireAdminAuth, async (req: AuthRequest, res: Respo
         query += ' AND DATE(pf.uploaded_at) = SUBDATE(CURDATE(), 1)';
       } else if (date_filter === 'this_week') {
         query += ' AND YEARWEEK(pf.uploaded_at, 1) = YEARWEEK(CURDATE(), 1)';
-      } else if (date_filter === 'last_7_days') {
+      } else if (date_filter === 'last_7_days' || date_filter === 'week') {
         query += ' AND pf.uploaded_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
       } else if (date_filter === 'this_month') {
         query += ' AND YEAR(pf.uploaded_at) = YEAR(CURDATE()) AND MONTH(pf.uploaded_at) = MONTH(CURDATE())';
-      } else if (date_filter === 'last_30_days') {
+      } else if (date_filter === 'last_30_days' || date_filter === 'month') {
         query += ' AND pf.uploaded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
       } else if (start_date && end_date) {
         query += ' AND DATE(pf.uploaded_at) BETWEEN ? AND ?';
@@ -483,15 +483,15 @@ adminRouter.get('/papers', requireAdminAuth, async (req: AuthRequest, res: Respo
   }
 });
 
-// POST /api/admin/papers/:id/reject
-adminRouter.post('/papers/:id/reject', requireAdminAuth, async (req: AuthRequest, res: Response) => {
+// POST /api/admin/papers/:id/reject & /api/admin/reject-paper & /api/admin/reject-paper.php
+adminRouter.post(['/papers/:id/reject', '/reject-paper', '/reject-paper.php'], requireAdminAuth, async (req: AuthRequest, res: Response) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string;
   try {
-    const paperId = Number(req.params.id);
-    const { rejection_reason } = req.body;
+    const paperId = Number(req.params.id || req.body.paper_id);
+    const { rejection_reason, reason: rawReason } = req.body;
     const admin = req.admin!;
 
-    const reason = String(rejection_reason || 'Paper violates upload guidelines or lacks clarity').trim();
+    const reason = String(rejection_reason || rawReason || 'Paper violates upload guidelines or lacks clarity').trim();
 
     if (isDbConnected() && papersPool) {
       await papersPool.query(
@@ -521,11 +521,11 @@ adminRouter.post('/papers/:id/reject', requireAdminAuth, async (req: AuthRequest
   }
 });
 
-// POST /api/admin/users/:id/suspend
-adminRouter.post('/users/:id/suspend', requireAdminAuth, async (req: AuthRequest, res: Response) => {
+// POST /api/admin/users/:id/suspend & /api/admin/suspend-user & /api/admin/suspend-user.php
+adminRouter.post(['/users/:id/suspend', '/suspend-user', '/suspend-user.php'], requireAdminAuth, async (req: AuthRequest, res: Response) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string;
   try {
-    const targetUserId = Number(req.params.id);
+    const targetUserId = Number(req.params.id || req.body.user_id);
     const admin = req.admin!;
 
     if (isDbConnected() && userPool) {
@@ -545,11 +545,11 @@ adminRouter.post('/users/:id/suspend', requireAdminAuth, async (req: AuthRequest
   }
 });
 
-// POST /api/admin/users/:id/activate
-adminRouter.post('/users/:id/activate', requireAdminAuth, async (req: AuthRequest, res: Response) => {
+// POST /api/admin/users/:id/activate & /api/admin/activate-user & /api/admin/activate-user.php
+adminRouter.post(['/users/:id/activate', '/activate-user', '/activate-user.php'], requireAdminAuth, async (req: AuthRequest, res: Response) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string;
   try {
-    const targetUserId = Number(req.params.id);
+    const targetUserId = Number(req.params.id || req.body.user_id);
     const admin = req.admin!;
 
     if (isDbConnected() && userPool) {

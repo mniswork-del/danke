@@ -5,8 +5,8 @@ import { generateUserToken, requireUserAuth, AuthRequest } from '../auth';
 
 export const authRouter = Router();
 
-// POST /api/auth/register
-authRouter.post('/register', async (req: AuthRequest, res: Response) => {
+// POST /api/auth/register & /api/auth/register.php
+authRouter.post(['/register', '/register.php'], async (req: AuthRequest, res: Response) => {
   try {
     const { phone_number, password } = req.body;
 
@@ -135,8 +135,8 @@ authRouter.post('/register', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/auth/login
-authRouter.post('/login', async (req: AuthRequest, res: Response) => {
+// POST /api/auth/login & /api/auth/login.php
+authRouter.post(['/login', '/login.php'], async (req: AuthRequest, res: Response) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string;
   try {
     const { phone_number, password } = req.body;
@@ -273,14 +273,14 @@ authRouter.post('/login', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/auth/logout
-authRouter.post('/logout', (req: AuthRequest, res: Response) => {
+// POST /api/auth/logout & /api/auth/logout.php
+authRouter.post(['/logout', '/logout.php'], (req: AuthRequest, res: Response) => {
   res.clearCookie('user_token');
   return res.json({ success: true, message: 'Logged out successfully.' });
 });
 
-// GET /api/auth/me
-authRouter.get('/me', requireUserAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/auth/me & /api/auth/me.php
+authRouter.get(['/me', '/me.php'], requireUserAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 

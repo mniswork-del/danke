@@ -4,8 +4,8 @@ import { requireUserAuth, AuthRequest } from '../auth';
 
 export const profileRouter = Router();
 
-// GET /api/profile
-profileRouter.get('/', requireUserAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/profile, /api/profile/get, /api/profile/get.php
+profileRouter.get(['/', '/get', '/get.php'], requireUserAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -72,8 +72,8 @@ profileRouter.get('/', requireUserAuth, async (req: AuthRequest, res: Response) 
   }
 });
 
-// PUT /api/profile
-profileRouter.put('/', requireUserAuth, async (req: AuthRequest, res: Response) => {
+// POST & PUT /api/profile, /api/profile/update, /api/profile/update.php
+const handleProfileUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { name, profession, address, city, email, age } = req.body;
@@ -174,4 +174,7 @@ profileRouter.put('/', requireUserAuth, async (req: AuthRequest, res: Response) 
     console.error('Profile Update Error:', err);
     return res.status(500).json({ success: false, error: 'Could not save profile changes.' });
   }
-});
+};
+
+profileRouter.put(['/', '/update', '/update.php'], requireUserAuth, handleProfileUpdate);
+profileRouter.post(['/', '/update', '/update.php'], requireUserAuth, handleProfileUpdate);

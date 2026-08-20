@@ -20,6 +20,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { updateUserProfile, calculateProfileCompletion } from '../lib/storage';
+import { profileApi } from '../lib/api';
 
 interface UserDashboardProps {
   currentUser: User;
@@ -61,7 +62,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
   const profileStats = calculateProfileCompletion(currentUser);
 
-  const handleSaveFullProfile = (e: React.FormEvent) => {
+  const handleSaveFullProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const updated = updateUserProfile(currentUser.id, {
       name: fullName.trim() || currentUser.name,
@@ -75,6 +76,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
       course: course.trim() || 'General Studies',
     });
     onUpdateUser(updated);
+
+    try {
+      await profileApi.updateProfile({
+        name: fullName.trim() || currentUser.name,
+        email: email.trim(),
+        city: place.trim(),
+        address: `${place.trim()}, ${state}`,
+        profession: `${course.trim()} at ${institution.trim() || 'University'}`,
+      });
+    } catch (err) {
+      console.warn('Backend profile sync note:', err);
+    }
+
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
   };
