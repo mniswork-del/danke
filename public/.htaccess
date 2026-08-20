@@ -2,9 +2,12 @@
   RewriteEngine On
   RewriteBase /
   
-  # Handle Authorization Header
+  # Handle Authorization Header for JWT Bearer tokens
   RewriteCond %{HTTP:Authorization} .
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # Never redirect /api routes to index.html
+  RewriteRule ^api/ - [L]
 
   # If requested file or directory exists, serve it directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]

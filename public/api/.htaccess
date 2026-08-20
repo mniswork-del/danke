@@ -1,9 +1,47 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /api/
 
+    # Pass Authorization Header to PHP ($_SERVER['HTTP_AUTHORIZATION'])
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Allow CORS headers if needed
+    <IfModule mod_headers.c>
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    </IfModule>
+
+    # Handle preflight OPTIONS requests
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+
+    # 1. If physical file or folder exists, serve directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    RewriteRule ^ index.html [L]
+    # 2. Profile endpoints
+    RewriteCond %{REQUEST_METHOD} GET
+    RewriteRule ^profile/?$ profile/get.php [L,QSA]
+
+    RewriteCond %{REQUEST_METHOD} (POST|PUT|PATCH)
+    RewriteRule ^profile/?$ profile/update.php [L,QSA]
+
+    # 3. Papers listing & upload routes
+    RewriteRule ^papers/?$ papers/list.php [L,QSA]
+    RewriteRule ^user/papers/?$ papers/list.php?user_only=1 [L,QSA]
+
+    # 4. Admin specific parameterized routes
+    RewriteRule ^admin/users/([0-9]+)/papers/?$ admin/papers.php?user_id=$1 [L,QSA]
+    RewriteRule ^admin/users/([0-9]+)/suspend/?$ admin/suspend-user.php?user_id=$1 [L,QSA]
+    RewriteRule ^admin/users/([0-9]+)/activate/?$ admin/activate-user.php?user_id=$1 [L,QSA]
+    RewriteRule ^admin/papers/([0-9]+)/reject/?$ admin/reject-paper.php?paper_id=$1 [L,QSA]
+    RewriteRule ^admin/users/([0-9]+)/?$ admin/user.php?id=$1 [L,QSA]
+
+    # 5. Generic auto-mapping: /api/auth/login -> /api/auth/login.php
+    RewriteCond %{DOCUMENT_ROOT}/api/$1.php -f [OR]
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^(.*)$ $1.php [L,QSA]
 </IfModule>
