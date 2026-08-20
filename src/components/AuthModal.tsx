@@ -16,7 +16,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { authApi } from '../lib/api';
-import { setCurrentUser } from '../lib/storage';
+import { setCurrentUser, saveRegisteredUserSession } from '../lib/storage';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -124,6 +124,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           joinedDate: new Date().toISOString().split('T')[0],
         };
 
+        saveRegisteredUserSession(registeredUser);
         setCurrentUser(registeredUser);
 
         setTimeout(() => {
@@ -315,7 +316,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <label className="text-xs font-bold text-slate-700">
                   Create Password <span className="text-rose-500">*</span>
                 </label>
-                <span className="text-[10px] text-slate-400 font-semibold">Min. 8 characters</span>
+                <span className="text-[10px] text-slate-400 font-semibold">Min. 6 characters</span>
               </div>
               <div className="relative">
                 <input
@@ -326,7 +327,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setErrorMessage('');
                     setPassword(e.target.value);
                   }}
-                  placeholder="Enter a strong password"
+                  placeholder="Enter your password (min 6 chars)"
                   className="w-full pl-3.5 pr-10 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-900 focus:outline-hidden focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   required
                   disabled={isLoading}
@@ -376,7 +377,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="submit"
               id="create-account-submit-btn"
-              disabled={isLoading || !phone || !password || !confirmPassword || password.length < 8 || password !== confirmPassword}
+              disabled={isLoading || !phone || !password || !confirmPassword || password.length < 6 || password !== confirmPassword}
               className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-emerald-600/25 transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2"
             >
               {isLoading ? (

@@ -4,7 +4,7 @@ import fs from 'fs';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { createServer as createViteServer } from 'vite';
-import { initializeDatabases } from './server/db';
+import { initializeDatabases, getDbInfo } from './server/db';
 import { authRouter } from './server/routes/authRoutes';
 import { profileRouter } from './server/routes/profileRoutes';
 import { paperRouter } from './server/routes/paperRoutes';
@@ -30,9 +30,13 @@ async function startServer() {
   }
   app.use('/uploads/papers', express.static(uploadDir));
 
-  // Health check endpoint
+  // Health check & Database status endpoint
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ 
+      status: 'ok', 
+      database: getDbInfo(),
+      timestamp: new Date().toISOString() 
+    });
   });
 
   // API Routes
@@ -48,6 +52,23 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    // SPA fallback in development mode for direct URL requests (e.g. /papers, /admin, /ebooks)
+    app.use('*', async (req, res, next) => {
+      // Ignore API routes if unmatched
+      if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
+        return next();
+      }
+      try {
+        const indexPath = path.resolve(process.cwd(), 'index.html');
+        let template = fs.readFileSync(indexPath, 'utf-8');
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));

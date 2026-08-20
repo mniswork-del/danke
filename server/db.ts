@@ -319,6 +319,18 @@ export function isDbConnected(): boolean {
   return isMysqlConnected;
 }
 
+export function getDbInfo() {
+  return {
+    connected: isMysqlConnected,
+    mode: isMysqlConnected ? 'live_mysql' : 'internal_sqlite_memory',
+    databases: [
+      { name: 'u913393473_users', status: isMysqlConnected ? 'connected' : 'ready_internal', records: isMysqlConnected ? 'live' : fallbackStore.userDb.users.length },
+      { name: 'u913393473_admin', status: isMysqlConnected ? 'connected' : 'ready_internal', records: isMysqlConnected ? 'live' : fallbackStore.adminDb.admin_users.length },
+      { name: 'u913393473_papers', status: isMysqlConnected ? 'connected' : 'ready_internal', records: isMysqlConnected ? 'live' : fallbackStore.papersDb.paper_files.length },
+    ]
+  };
+}
+
 // Setup SQL Schema for 3 Databases if missing
 async function setupTables() {
   if (!userPool || !adminPool || !papersPool) return;
