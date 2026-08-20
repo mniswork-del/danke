@@ -174,13 +174,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setSuccessMessage('Logged in successfully!');
 
         const userObj = data.user || {};
+        const profileObj = userObj.profile || {};
+        
         const loggedInUser: User = {
           id: String(userObj.id || Date.now()),
           mobile: cleanPhone,
-          name: userObj.name || userObj.profile?.name || `User ${cleanPhone.slice(-4)}`,
-          city: userObj.city || userObj.profile?.city || '',
-          email: userObj.email || userObj.profile?.email || '',
-          profileCompleted: Boolean(userObj.profile_completed),
+          name: profileObj.name || userObj.name || `User ${cleanPhone.slice(-4)}`,
+          city: profileObj.city || userObj.city || '',
+          place: profileObj.city || profileObj.address || '',
+          email: profileObj.email || userObj.email || '',
+          institution: profileObj.profession || '',
+          course: profileObj.profession || '',
+          profileCompleted: Boolean(userObj.profile_completed) || Boolean(profileObj.name && profileObj.city),
           role: 'student',
           status: userObj.status || 'active',
           otpVerified: true,
@@ -197,11 +202,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           joinedDate: userObj.created_at ? new Date(userObj.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         };
 
-        saveRegisteredUserSession(loggedInUser);
-        setCurrentUser(loggedInUser);
+        const savedUser = saveRegisteredUserSession(loggedInUser);
+        setCurrentUser(savedUser);
 
         setTimeout(() => {
-          onLoginSuccess(loggedInUser);
+          onLoginSuccess(savedUser);
           onClose();
         }, 400);
       } else {

@@ -201,37 +201,54 @@ export function setCurrentUser(user: User | null) {
 export function saveRegisteredUserSession(user: Partial<User> & { mobile: string }): User {
   const users = getAllUsers();
   const cleanMob = user.mobile.replace(/\D/g, '').slice(-10);
-  const existingIndex = users.findIndex(u => u.mobile.replace(/\D/g, '').slice(-10) === cleanMob);
+  const existingIndex = users.findIndex(u => u.mobile && u.mobile.replace(/\D/g, '').slice(-10) === cleanMob);
+  const existing = existingIndex >= 0 ? users[existingIndex] : null;
 
-  const newUser: User = {
-    id: user.id || `usr-${Date.now()}`,
+  const merged: User = {
+    id: user.id || existing?.id || `usr-${Date.now()}`,
     mobile: cleanMob,
-    name: user.name || `User ${cleanMob.slice(-4)}`,
-    email: user.email || '',
-    dob: user.dob || '',
-    place: user.place || '',
+    name: user.name || existing?.name || `User ${cleanMob.slice(-4)}`,
+    email: user.email || existing?.email || '',
+    dob: user.dob || existing?.dob || '',
+    place: user.place || existing?.place || existing?.city || '',
+    city: user.city || existing?.city || user.place || existing?.place || '',
+    state: user.state || existing?.state || 'Uttar Pradesh',
+    educationCategory: user.educationCategory || existing?.educationCategory || 'college',
+    institution: user.institution || existing?.institution || '',
+    course: user.course || existing?.course || '',
+    preferredSubjects: user.preferredSubjects || existing?.preferredSubjects || [],
+    avatarUrl: user.avatarUrl || existing?.avatarUrl || '',
+    payoutUpiId: user.payoutUpiId || existing?.payoutUpiId || '',
+    payoutAccountName: user.payoutAccountName || existing?.payoutAccountName || user.name || existing?.name || '',
     otpVerified: true,
-    profileCompleted: false,
-    profileCompletionPercent: typeof user.profileCompletionPercent === 'number' ? user.profileCompletionPercent : 0,
-    role: user.role || 'student',
-    joinedDate: user.joinedDate || new Date().toISOString().split('T')[0],
-    status: 'active',
-    uploadedCount: 0,
-    approvedCount: 0,
-    rejectedCount: 0,
-    duplicateCount: 0,
-    pendingCount: 0,
-    totalViews: 0,
-    totalDownloads: 0,
-    totalEarned: 0,
-    pendingPayment: 0,
-    totalPaid: 0,
+    profileCompleted: user.profileCompleted ?? existing?.profileCompleted ?? false,
+    profileCompletionPercent: typeof user.profileCompletionPercent === 'number' ? user.profileCompletionPercent : (existing?.profileCompletionPercent || 0),
+    role: user.role || existing?.role || 'student',
+    joinedDate: user.joinedDate || existing?.joinedDate || new Date().toISOString().split('T')[0],
+    status: user.status || existing?.status || 'active',
+    uploadedCount: existing?.uploadedCount || 0,
+    approvedCount: existing?.approvedCount || 0,
+    rejectedCount: existing?.rejectedCount || 0,
+    duplicateCount: existing?.duplicateCount || 0,
+    pendingCount: existing?.pendingCount || 0,
+    totalViews: existing?.totalViews || 0,
+    totalDownloads: existing?.totalDownloads || 0,
+    totalEarned: existing?.totalEarned || 0,
+    pendingPayment: existing?.pendingPayment || 0,
+    totalPaid: existing?.totalPaid || 0,
+  };
+
+  const { percent, isReady } = calculateProfileCompletion(merged);
+  const finalizedUser: User = {
+    ...merged,
+    profileCompletionPercent: percent,
+    profileCompleted: isReady || merged.profileCompleted,
   };
 
   if (existingIndex >= 0) {
-    users[existingIndex] = { ...users[existingIndex], ...newUser };
+    users[existingIndex] = finalizedUser;
   } else {
-    users.push(newUser);
+    users.push(finalizedUser);
   }
 
   // Sanitize all users to never store passwords in localStorage
@@ -241,8 +258,8 @@ export function saveRegisteredUserSession(user: Partial<User> & { mobile: string
   });
 
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(safeUsersList));
-  setCurrentUser(newUser);
-  return newUser;
+  setCurrentUser(finalizedUser);
+  return finalizedUser;
 }
 
 export function getAllUsers(): User[] {

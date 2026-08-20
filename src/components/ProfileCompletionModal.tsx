@@ -60,7 +60,7 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
   useEffect(() => {
     if (currentUser) {
       setFullName(
-        currentUser.name && !currentUser.name.startsWith('Student ') ? currentUser.name : ''
+        currentUser.name || ''
       );
       setEmail(currentUser.email || '');
       setDob(currentUser.dob || '');
@@ -151,14 +151,15 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
     setIsSavedSuccess(true);
 
     try {
-      // Send background update to Hostinger MySQL profile table
+      // Send direct update to Hostinger MySQL profile table with phone number fallback & token
       await profileApi.updateProfile({
         name: fullName.trim(),
         profession: course.trim() || 'Student',
         address: `${place.trim()}, ${state}`,
         city: place.trim(),
         email: email.trim(),
-      });
+        phone_number: currentUser.mobile,
+      } as any);
     } catch (apiErr) {
       console.warn('Backend profile update note:', apiErr);
     } finally {
