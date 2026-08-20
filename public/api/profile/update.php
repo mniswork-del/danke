@@ -78,8 +78,8 @@ if ($userDb) {
             'user' => $userData
         ]);
 
-    } catch (Exception $e) {
-        send_error_response('Failed to update profile due to database error.', 500);
+    } catch (\Throwable $e) {
+        send_error_response('Profile update failed: ' . $e->getMessage(), 500);
     }
 } else {
     // Standalone fallback

@@ -93,8 +93,8 @@ if ($userDb) {
             'user' => $userData
         ]);
 
-    } catch (Exception $e) {
-        send_error_response('Login service encounter a database error. Please try again.', 500);
+    } catch (\Throwable $e) {
+        send_error_response('Login failed: ' . $e->getMessage(), 500);
     }
 } else {
     // Standalone fallback

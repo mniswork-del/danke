@@ -79,8 +79,8 @@ if ($userDb) {
             'user' => $userData
         ], 201);
 
-    } catch (Exception $e) {
-        send_error_response('Registration failed due to a database error. Please try again.', 500);
+    } catch (\Throwable $e) {
+        send_error_response('Registration failed: ' . $e->getMessage(), 500);
     }
 } else {
     // Graceful fallback for environments without live MySQL
