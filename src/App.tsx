@@ -271,8 +271,9 @@ export default function App() {
   };
 
   const handleProfileComplete = (user: User) => {
+    setCurrentUser(user);
     setCurrentUserState(user);
-    refreshAppData();
+    setUsers(getAllUsers());
     setIsProfileCompletionOpen(false);
   };
 
@@ -466,6 +467,7 @@ export default function App() {
         isOpen={isProfileCompletionOpen}
         onClose={() => setIsProfileCompletionOpen(false)}
         currentUser={currentUser}
+        onProfileUpdated={handleProfileComplete}
         onComplete={handleProfileComplete}
       />
 

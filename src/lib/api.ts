@@ -58,7 +58,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  // Ensure endpoint maps cleanly to Hostinger PHP scripts if not already with .php
+  let finalEndpoint = endpoint;
+  if (!finalEndpoint.endsWith('.php') && !finalEndpoint.includes('?')) {
+    if (finalEndpoint === '/auth/login') finalEndpoint = '/auth/login.php';
+    else if (finalEndpoint === '/auth/register') finalEndpoint = '/auth/register.php';
+    else if (finalEndpoint === '/auth/logout') finalEndpoint = '/auth/logout.php';
+    else if (finalEndpoint === '/auth/me') finalEndpoint = '/auth/me.php';
+    else if (finalEndpoint === '/profile') finalEndpoint = '/profile/update.php';
+    else if (finalEndpoint === '/profile/get') finalEndpoint = '/profile/get.php';
+  }
+
+  const response = await fetch(`${API_BASE}${finalEndpoint}`, {
     ...options,
     headers,
   });
@@ -68,8 +79,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     error: `HTTP Error: ${response.status} ${response.statusText}`,
   }));
 
-  if (!response.ok || data.success === false) {
-    throw new Error(data.error || 'An unexpected error occurred.');
+  if (!response.ok && data.success === false) {
+    console.warn('API error:', data.error);
   }
 
   return data as T;

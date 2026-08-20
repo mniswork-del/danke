@@ -25,7 +25,8 @@ interface ProfileCompletionModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: User | null;
-  onProfileUpdated: (updatedUser: User) => void;
+  onProfileUpdated?: (updatedUser: User) => void;
+  onComplete?: (updatedUser: User) => void;
   actionReason?: 'upload' | 'download' | 'general';
 }
 
@@ -34,6 +35,7 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
   onClose,
   currentUser,
   onProfileUpdated,
+  onComplete,
   actionReason = 'general',
 }) => {
   if (!isOpen || !currentUser) return null;
@@ -52,6 +54,7 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
   const [course, setCourse] = useState(currentUser.course || '');
   const [payoutUpiId, setPayoutUpiId] = useState(currentUser.payoutUpiId || '');
   const [isSavedSuccess, setIsSavedSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Sync state if currentUser changes
   useEffect(() => {
@@ -68,7 +71,7 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       setCourse(currentUser.course || '');
       setPayoutUpiId(currentUser.payoutUpiId || '');
     }
-  }, [currentUser]);
+  }, [currentUser, isOpen]);
 
   const indianStates = [
     'Uttar Pradesh',
@@ -110,7 +113,7 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fullName.trim()) {
+    if (!fullName.trim() || fullName.trim().length < 2) {
       alert('Please enter your full name.');
       return;
     }
@@ -123,23 +126,12 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       return;
     }
 
-    try {
-      // Send real update to Hostinger MySQL profile table
-      await profileApi.updateProfile({
-        name: fullName.trim(),
-        profession: course.trim() || 'Student',
-        address: `${place.trim()}, ${state}`,
-        city: place.trim(),
-        email: email.trim(),
-      });
-    } catch (apiErr) {
-      console.warn('Backend profile update note:', apiErr);
-    }
+    setIsSaving(true);
 
     const updated = updateUserProfile(currentUser.id, {
       name: fullName.trim(),
       email: email.trim(),
-      dob: dob,
+      dob: dob || '2000-01-01',
       place: place.trim(),
       city: place.trim(),
       state: state,
@@ -150,12 +142,32 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       payoutAccountName: fullName.trim(),
     });
 
-    onProfileUpdated(updated);
+    if (typeof onProfileUpdated === 'function') {
+      onProfileUpdated(updated);
+    }
+    if (typeof onComplete === 'function') {
+      onComplete(updated);
+    }
     setIsSavedSuccess(true);
-    setTimeout(() => {
-      setIsSavedSuccess(false);
-      onClose();
-    }, 1200);
+
+    try {
+      // Send background update to Hostinger MySQL profile table
+      await profileApi.updateProfile({
+        name: fullName.trim(),
+        profession: course.trim() || 'Student',
+        address: `${place.trim()}, ${state}`,
+        city: place.trim(),
+        email: email.trim(),
+      });
+    } catch (apiErr) {
+      console.warn('Backend profile update note:', apiErr);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => {
+        setIsSavedSuccess(false);
+        onClose();
+      }, 600);
+    }
   };
 
   const getProgressColor = (percent: number) => {
@@ -444,10 +456,22 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
             <button
               type="submit"
               id="save-profile-btn"
-              className="px-7 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center space-x-2 cursor-pointer"
+              disabled={isSaving}
+              className={`px-7 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center space-x-2 cursor-pointer ${
+                isSaving ? 'opacity-75 cursor-wait' : ''
+              }`}
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Save & Verify Profile ({liveStats.percent}%)</span>
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Saving Profile...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Save & Verify Profile ({liveStats.percent}%)</span>
+                </>
+              )}
             </button>
           </div>
         </form>

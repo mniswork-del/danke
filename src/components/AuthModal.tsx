@@ -101,7 +101,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const data = await authApi.register(cleanPhone, password);
 
-      if (data && data.success === true) {
+      if (data && (data.success !== false && (data.token || data.user || data.success === true))) {
         setSuccessMessage('Account registered successfully!');
         
         const registeredUser: User = {
@@ -134,6 +134,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onLoginSuccess(registeredUser);
           onClose();
         }, 500);
+      } else {
+        setErrorMessage((data as any)?.error || (data as any)?.message || 'Registration failed.');
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'Registration failed. Please try again.');
@@ -168,18 +170,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const data = await authApi.login(cleanPhone, password);
 
-      if (data && data.success === true) {
+      if (data && (data.success !== false && (data.token || data.user || data.success === true))) {
         setSuccessMessage('Logged in successfully!');
 
+        const userObj = data.user || {};
         const loggedInUser: User = {
-          id: String(data.user.id),
+          id: String(userObj.id || Date.now()),
           mobile: cleanPhone,
-          name: data.user.name || data.user.profile?.name || `User ${cleanPhone.slice(-4)}`,
-          city: data.user.profile?.city || '',
-          email: data.user.profile?.email || '',
-          profileCompleted: Boolean(data.user.profile_completed),
+          name: userObj.name || userObj.profile?.name || `User ${cleanPhone.slice(-4)}`,
+          city: userObj.city || userObj.profile?.city || '',
+          email: userObj.email || userObj.profile?.email || '',
+          profileCompleted: Boolean(userObj.profile_completed),
           role: 'student',
-          status: data.user.status || 'active',
+          status: userObj.status || 'active',
           otpVerified: true,
           uploadedCount: 0,
           approvedCount: 0,
@@ -191,7 +194,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           totalEarned: 0,
           pendingPayment: 0,
           totalPaid: 0,
-          joinedDate: data.user.created_at ? new Date(data.user.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          joinedDate: userObj.created_at ? new Date(userObj.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         };
 
         saveRegisteredUserSession(loggedInUser);
@@ -201,6 +204,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onLoginSuccess(loggedInUser);
           onClose();
         }, 400);
+      } else {
+        setErrorMessage((data as any)?.error || (data as any)?.message || 'Login failed.');
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'Invalid phone number or password.');
