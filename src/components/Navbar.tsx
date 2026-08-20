@@ -98,13 +98,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Direct 4 main menus + Guide & Support
+  // Direct 4 main menus + Guide & Support with proper route paths
   const navItems = [
-    { id: 'home', label: 'Home' },
-    { id: 'papers', label: 'Question Papers' },
-    { id: 'ebooks', label: 'E-Books' },
-    { id: 'answer-keys', label: 'Answer Keys' },
-    { id: 'support', label: 'Guide & Support' },
+    { id: 'home', label: 'Home', path: '/' },
+    { id: 'papers', label: 'Question Papers', path: '/papers' },
+    { id: 'ebooks', label: 'E-Books', path: '/ebooks' },
+    { id: 'answer-keys', label: 'Answer Keys', path: '/answer-keys' },
+    { id: 'support', label: 'Guide & Support', path: '/support' },
   ];
 
   return (
@@ -119,22 +119,30 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="bg-white rounded-3xl sm:rounded-full border border-slate-200/90 shadow-xl shadow-slate-900/10 px-5 sm:px-8 lg:px-10 py-3 sm:py-4 flex items-center justify-between min-h-[80px] sm:min-h-[92px] backdrop-blur-md">
         
         {/* Left: Brand Official Logo */}
-        <button
-          onClick={() => handleNavClick('home')}
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            handleNavClick('home');
+          }}
           className="flex items-center text-left focus:outline-hidden cursor-pointer shrink-0 py-1"
           title="University Tree"
         >
           <Logo size="md" />
-        </button>
+        </a>
 
         {/* Center: Direct Menu Items (Home, Question Papers, E-Books, Answer Keys, Guide & Support) */}
         <nav className="hidden lg:flex items-center space-x-5 xl:space-x-7">
           {navItems.map(item => {
             const isActive = activeTab === item.id;
             return (
-              <button
+              <a
                 key={item.id}
-                onClick={() => handleNavClick(item.id)}
+                href={item.path}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick(item.id);
+                }}
                 className={`text-sm xl:text-base font-bold transition-colors cursor-pointer py-1.5 px-0.5 relative ${
                   isActive
                     ? 'text-orange-600 font-extrabold'
@@ -145,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {isActive && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600 rounded-full" />
                 )}
-              </button>
+              </a>
             );
           })}
         </nav>
@@ -253,8 +261,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div className="py-1.5">
-                  <button
-                    onClick={() => {
+                  <a
+                    href="/dashboard"
+                    onClick={(e) => {
+                      e.preventDefault();
                       setUserDropdownOpen(false);
                       onOpenUserDashboard();
                     }}
@@ -262,10 +272,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <GraduationCap className="w-4 h-4 text-emerald-600" />
                     <span>My Dashboard</span>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => {
+                  <a
+                    href="/dashboard"
+                    onClick={(e) => {
+                      e.preventDefault();
                       setUserDropdownOpen(false);
                       onOpenUserDashboard();
                     }}
@@ -273,10 +285,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <FileText className="w-4 h-4 text-emerald-600" />
                     <span>My Contributions</span>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => {
+                  <a
+                    href="/admin"
+                    onClick={(e) => {
+                      e.preventDefault();
                       setUserDropdownOpen(false);
                       onOpenAdmin();
                     }}
@@ -284,7 +298,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <ShieldAlert className="w-4 h-4 text-purple-600" />
                     <span>Admin Portal</span>
-                  </button>
+                  </a>
                 </div>
 
                 <div className="border-t border-slate-100 pt-1">
@@ -360,9 +374,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="lg:hidden mt-2 bg-white rounded-3xl border border-slate-200/80 shadow-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-1 gap-1">
             {navItems.map(item => (
-              <button
+              <a
                 key={item.id}
-                onClick={() => handleNavClick(item.id)}
+                href={item.path}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick(item.id);
+                }}
                 className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
                   activeTab === item.id
                     ? 'text-orange-600 bg-orange-50 font-extrabold'
@@ -370,7 +388,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <span>{item.label}</span>
-              </button>
+              </a>
             ))}
           </div>
 

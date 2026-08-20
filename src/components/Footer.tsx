@@ -42,30 +42,65 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenUpload }) => {
             </h4>
             <ul className="space-y-2 text-xs text-slate-600 font-medium">
               <li>
-                <button onClick={() => onNavigate('papers')} className="hover:text-emerald-700 cursor-pointer">
+                <a
+                  href="/papers"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('papers');
+                  }}
+                  className="hover:text-emerald-700 cursor-pointer block"
+                >
                   Question Papers (PYQs)
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => onNavigate('ebooks')} className="hover:text-emerald-700 cursor-pointer">
+                <a
+                  href="/ebooks"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('ebooks');
+                  }}
+                  className="hover:text-emerald-700 cursor-pointer block"
+                >
                   Free Open E-Books
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => onNavigate('answer-keys')} className="hover:text-emerald-700 cursor-pointer">
+                <a
+                  href="/answer-keys"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('answer-keys');
+                  }}
+                  className="hover:text-emerald-700 cursor-pointer block"
+                >
                   Verified Answer Keys
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => onNavigate('support')} className="hover:text-emerald-700 text-emerald-800 font-bold flex items-center space-x-1 cursor-pointer">
+                <a
+                  href="/support"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('support');
+                  }}
+                  className="hover:text-emerald-700 text-emerald-800 font-bold flex items-center space-x-1 cursor-pointer"
+                >
                   <Headphones className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Guide & Support</span>
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => onNavigate('home')} className="hover:text-emerald-700 cursor-pointer">
+                <a
+                  href="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('home');
+                  }}
+                  className="hover:text-emerald-700 cursor-pointer block"
+                >
                   Find Your Path (All Levels)
-                </button>
+                </a>
               </li>
             </ul>
           </div>
@@ -106,21 +141,50 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenUpload }) => {
             © {new Date().getFullYear()} University Tree • Built for Students Across India
           </div>
           <div className="flex items-center space-x-4">
-            <button onClick={() => onNavigate('support')} className="hover:text-slate-600 cursor-pointer">
+            <a
+              href="/support"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('support');
+              }}
+              className="hover:text-slate-600 cursor-pointer"
+            >
               Help & FAQs
-            </button>
+            </a>
             <span>•</span>
-            <span className="hover:text-slate-600 cursor-pointer">Terms of Contribution</span>
+            <a
+              href="/support"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('support');
+              }}
+              className="hover:text-slate-600 cursor-pointer"
+            >
+              Terms of Contribution
+            </a>
             <span>•</span>
-            <span className="hover:text-slate-600 cursor-pointer">Privacy Policy</span>
+            <a
+              href="/support"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('support');
+              }}
+              className="hover:text-slate-600 cursor-pointer"
+            >
+              Privacy Policy
+            </a>
             <span>•</span>
-            <button
-              onClick={() => onNavigate('admin')}
+            <a
+              href="/admin"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('admin');
+              }}
               className="hover:text-slate-600 cursor-pointer transition-colors"
               title="Admin Panel"
             >
               Admin
-            </button>
+            </a>
           </div>
         </div>
       </div>

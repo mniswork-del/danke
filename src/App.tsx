@@ -34,16 +34,66 @@ import { ProfileCompletionModal } from './components/ProfileCompletionModal';
 import { ReportModal } from './components/ReportModal';
 import { Footer } from './components/Footer';
 
+// Helper to extract tab and target item from current URL
+const getRouteFromUrl = () => {
+  if (typeof window === 'undefined') return { tab: 'home', paperId: null, category: null };
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '');
+  const searchParams = new URLSearchParams(window.location.search);
+
+  let paperId = searchParams.get('id') || searchParams.get('paper') || null;
+  const category = searchParams.get('category') || null;
+
+  // Check direct URL like /paper/123 or /papers/123
+  const paperPathMatch = path.match(/^\/papers?\/([a-zA-Z0-9_-]+)/);
+  if (paperPathMatch && paperPathMatch[1] && !['list', 'types', 'upload', 'view'].includes(paperPathMatch[1])) {
+    paperId = paperPathMatch[1];
+  }
+
+  if (path.startsWith('/admin') || hash.startsWith('admin')) {
+    return { tab: 'admin', paperId, category };
+  }
+  if (path.startsWith('/papers') || path.startsWith('/paper') || path.startsWith('/question-papers') || hash.startsWith('papers') || hash.startsWith('paper')) {
+    return { tab: 'papers', paperId, category };
+  }
+  if (path.startsWith('/ebooks') || path.startsWith('/ebook') || hash.startsWith('ebooks') || hash.startsWith('ebook')) {
+    return { tab: 'ebooks', paperId, category };
+  }
+  if (path.startsWith('/answer-keys') || path.startsWith('/answerkeys') || path.startsWith('/solutions') || hash.startsWith('answer-keys') || hash.startsWith('answerkeys')) {
+    return { tab: 'answer-keys', paperId, category };
+  }
+  if (path.startsWith('/support') || path.startsWith('/help') || path.startsWith('/guide') || path.startsWith('/contact') || hash.startsWith('support') || hash.startsWith('help')) {
+    return { tab: 'support', paperId, category };
+  }
+  if (path.startsWith('/how-it-works') || hash.startsWith('how-it-works')) {
+    return { tab: 'how-it-works', paperId, category };
+  }
+  if (path.startsWith('/dashboard') || path.startsWith('/profile') || path.startsWith('/my-uploads') || path.startsWith('/my-account') || hash.startsWith('dashboard') || hash.startsWith('profile')) {
+    return { tab: 'dashboard', paperId, category };
+  }
+
+  return { tab: 'home', paperId, category };
+};
+
+const getUrlForTab = (tab: string, paperId?: string | null, category?: string | null) => {
+  if (tab === 'papers') {
+    if (paperId) return `/papers?id=${encodeURIComponent(paperId)}`;
+    if (category) return `/papers?category=${encodeURIComponent(category)}`;
+    return '/papers';
+  }
+  if (tab === 'ebooks') return '/ebooks';
+  if (tab === 'answer-keys') return '/answer-keys';
+  if (tab === 'support') return '/support';
+  if (tab === 'how-it-works') return '/how-it-works';
+  if (tab === 'dashboard') return '/dashboard';
+  if (tab === 'admin') return '/admin';
+  return '/';
+};
+
 export default function App() {
+  const initialRoute = getRouteFromUrl();
   const [currentUser, setCurrentUserState] = useState<User | null>(() => getCurrentUser());
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      if (window.location.pathname === '/admin' || window.location.hash.toLowerCase().includes('admin')) {
-        return 'admin';
-      }
-    }
-    return 'home';
-  });
+  const [activeTab, setActiveTab] = useState<string>(initialRoute.tab);
 
   // Application Data States
   const [papers, setPapers] = useState<PaperItem[]>(() => getAllPapers());
@@ -63,7 +113,7 @@ export default function App() {
   const [reportingPaper, setReportingPaper] = useState<PaperItem | null>(null);
 
   // Initial Selected category from Path Finder
-  const [selectedCatalogCategory, setSelectedCatalogCategory] = useState<any>(null);
+  const [selectedCatalogCategory, setSelectedCatalogCategory] = useState<any>(initialRoute.category);
 
   // Sync state from storage and backend
   const refreshAppData = async () => {
@@ -122,12 +172,33 @@ export default function App() {
   useEffect(() => {
     refreshAppData();
 
-    // Check URL path / hash for /admin navigation
+    // Check URL path / query / hash on route change
     const checkRoute = () => {
-      if (window.location.pathname === '/admin' || window.location.hash.toLowerCase().includes('admin')) {
-        setActiveTab('admin');
+      const { tab, paperId, category } = getRouteFromUrl();
+      setActiveTab(tab);
+      if (category) {
+        setSelectedCatalogCategory(category);
+      }
+      if (paperId) {
+        const allCurrentPapers = getAllPapers();
+        const found = allCurrentPapers.find(p => String(p.id) === String(paperId));
+        if (found) {
+          setSelectedPaper(found);
+        }
+      } else {
+        setSelectedPaper(null);
       }
     };
+
+    // Initial check for direct paper link
+    const initial = getRouteFromUrl();
+    if (initial.paperId) {
+      const allCurrentPapers = getAllPapers();
+      const found = allCurrentPapers.find(p => String(p.id) === String(initial.paperId));
+      if (found) {
+        setSelectedPaper(found);
+      }
+    }
 
     window.addEventListener('popstate', checkRoute);
     window.addEventListener('hashchange', checkRoute);
@@ -138,14 +209,36 @@ export default function App() {
   }, []);
 
   // Update browser URL hash/pathname cleanly when navigating
-  const navigateToTab = (tab: string) => {
+  const navigateToTab = (tab: string, paperId?: string | null, category?: string | null) => {
     setActiveTab(tab);
-    if (tab === 'admin') {
-      window.history.pushState(null, '', '/admin');
-    } else if (window.location.pathname === '/admin') {
-      window.history.pushState(null, '', '/');
+    if (category !== undefined) {
+      setSelectedCatalogCategory(category);
+    }
+    const targetUrl = getUrlForTab(tab, paperId, category);
+    if (typeof window !== 'undefined' && window.location.pathname + window.location.search !== targetUrl) {
+      window.history.pushState(null, '', targetUrl);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenPaper = (paper: PaperItem) => {
+    setSelectedPaper(paper);
+    if (typeof window !== 'undefined') {
+      const targetUrl = `/papers?id=${encodeURIComponent(paper.id)}`;
+      if (window.location.pathname + window.location.search !== targetUrl) {
+        window.history.pushState(null, '', targetUrl);
+      }
+    }
+  };
+
+  const handleClosePaper = () => {
+    setSelectedPaper(null);
+    if (typeof window !== 'undefined') {
+      const targetUrl = getUrlForTab(activeTab, null, selectedCatalogCategory);
+      if (window.location.pathname + window.location.search !== targetUrl) {
+        window.history.pushState(null, '', targetUrl);
+      }
+    }
   };
 
   const handleLogout = () => {
@@ -227,7 +320,7 @@ export default function App() {
             {/* Path Finder Section (8 Categories + 5 Steps) */}
             <PathFinderSection
               papers={papers}
-              onSelectPaper={p => setSelectedPaper(p)}
+              onSelectPaper={p => handleOpenPaper(p)}
               onViewAllPapers={handleCatalogExplore}
             />
 
@@ -238,7 +331,7 @@ export default function App() {
             <AnswerKeysSection
               answerKeys={answerKeys}
               allPapers={papers}
-              onSelectPaper={p => setSelectedPaper(p)}
+              onSelectPaper={p => handleOpenPaper(p)}
             />
 
             {/* How It Works Explanation */}
@@ -254,7 +347,7 @@ export default function App() {
           <PapersCatalogView
             papers={papers}
             initialCategory={selectedCatalogCategory}
-            onSelectPaper={p => setSelectedPaper(p)}
+            onSelectPaper={p => handleOpenPaper(p)}
             onOpenUpload={() => setIsUploadOpen(true)}
           />
         )}
@@ -269,7 +362,7 @@ export default function App() {
           <AnswerKeysSection
             answerKeys={answerKeys}
             allPapers={papers}
-            onSelectPaper={p => setSelectedPaper(p)}
+            onSelectPaper={p => handleOpenPaper(p)}
           />
         )}
 
@@ -289,7 +382,7 @@ export default function App() {
             allPapers={papers}
             allPayments={payments}
             onOpenUpload={() => setIsUploadOpen(true)}
-            onSelectPaper={p => setSelectedPaper(p)}
+            onSelectPaper={p => handleOpenPaper(p)}
             onUpdateUser={u => setCurrentUserState(u)}
           />
         )}
@@ -324,7 +417,7 @@ export default function App() {
             allReports={reports}
             auditLogs={auditLogs}
             onRefreshData={refreshAppData}
-            onSelectPaper={p => setSelectedPaper(p)}
+            onSelectPaper={p => handleOpenPaper(p)}
             onExitAdmin={() => navigateToTab('home')}
           />
         )}
@@ -341,7 +434,7 @@ export default function App() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         papers={papers}
-        onSelectPaper={p => setSelectedPaper(p)}
+        onSelectPaper={p => handleOpenPaper(p)}
       />
 
       <UploadModal
@@ -368,9 +461,9 @@ export default function App() {
 
       <PaperViewerModal
         paper={selectedPaper}
-        onClose={() => setSelectedPaper(null)}
+        onClose={handleClosePaper}
         onOpenReport={p => setReportingPaper(p)}
-        onSelectRelatedPaper={p => setSelectedPaper(p)}
+        onSelectRelatedPaper={p => handleOpenPaper(p)}
         allPapers={papers}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
