@@ -4,187 +4,168 @@ import { requireUserAuth, AuthRequest } from '../auth';
 
 export const profileRouter = Router();
 
-// GET /api/profile, /api/profile/get, /api/profile/get.php
-profileRouter.get(['/', '/get', '/get.php'], requireUserAuth, async (req: AuthRequest, res: Response) => {
+// POST /api/profile/sync - Save user profile to database (called after login)
+profileRouter.post('/sync', requireUserAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
+    const { name, email, city, profession, address, age, phone_number } = req.body;
 
     if (isDbConnected() && userPool) {
-      const [users]: any = await userPool.query('SELECT id, phone_number, status, profile_completed FROM users WHERE id = ?', [userId]);
-      if (users.length === 0) {
-        return res.status(404).json({ success: false, error: 'User not found.' });
+      // Update user profile in database
+      await userPool.query(
+        `UPDATE user_profiles SET 
+          name = COALESCE(?, name),
+          email = COALESCE(?, email),
+          city = COALESCE(?, city),
+          profession = COALESCE(?, profession),
+          address = COALESCE(?, address),
+          age = COALESCE(?, age),
+          updated_at = NOW()
+        WHERE user_id = ?`,
+        [name, email, city, profession, address, age, userId]
+      );
+
+      // Check if profile_completed should be updated
+      const [profile]: any = await userPool.query(
+        'SELECT * FROM user_profiles WHERE user_id = ?',
+        [userId]
+      );
+
+      // Mark profile as complete if name and email are provided
+      const profileCompleted = profile[0]?.name && profile[0]?.email ? 1 : 0;
+      if (profileCompleted) {
+        await userPool.query(
+          'UPDATE users SET profile_completed = ? WHERE id = ?',
+          [profileCompleted, userId]
+        );
       }
 
-      const user = users[0];
-      const [profiles]: any = await userPool.query('SELECT * FROM user_profiles WHERE user_id = ?', [userId]);
-      const profile = profiles[0] || {
-        name: '',
-        profession: '',
-        address: '',
-        city: '',
-        phone_number: user.phone_number,
-        email: '',
-        age: null,
-      };
+      // Return updated profile
+      const [updatedProfile]: any = await userPool.query(
+        'SELECT * FROM user_profiles WHERE user_id = ?',
+        [userId]
+      );
 
       return res.json({
         success: true,
-        user: {
-          id: user.id,
-          phone_number: user.phone_number,
-          status: user.status,
-          profile_completed: user.profile_completed,
-          profile,
-        },
+        message: 'Profile synchronized successfully',
+        profile: updatedProfile[0] || {}
       });
     } else {
-      const user = fallbackStore.userDb.users.find(u => u.id === userId);
-      if (!user) {
-        return res.status(404).json({ success: false, error: 'User not found.' });
+      // Fallback in-memory
+      const profile = fallbackStore.userDb.user_profiles.find(p => p.user_id === userId);
+      if (profile) {
+        if (name) profile.name = name;
+        if (email) profile.email = email;
+        if (city) profile.city = city;
+        if (profession) profile.profession = profession;
+        if (address) profile.address = address;
+        if (age !== null && age !== undefined) profile.age = age;
+        profile.updated_at = new Date().toISOString();
       }
-      const profile = fallbackStore.userDb.user_profiles.find(p => p.user_id === user.id) || {
-        id: user.id,
-        user_id: user.id,
-        name: '',
-        profession: '',
-        address: '',
-        city: '',
-        phone_number: user.phone_number,
-        email: '',
-        age: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+
+      // Mark profile complete if name and email exist
+      const user = fallbackStore.userDb.users.find(u => u.id === userId);
+      if (user && profile?.name && profile?.email) {
+        user.profile_completed = 1;
+      }
 
       return res.json({
         success: true,
-        user: {
-          id: user.id,
-          phone_number: user.phone_number,
-          status: user.status,
-          profile_completed: user.profile_completed,
-          profile,
-        },
+        message: 'Profile synchronized successfully',
+        profile: profile || {}
       });
     }
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: 'Failed to load profile details.' });
+    console.error('Profile Sync Error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to sync profile.' });
   }
 });
 
-// POST & PUT /api/profile, /api/profile/update, /api/profile/update.php
-const handleProfileUpdate = async (req: AuthRequest, res: Response) => {
+// GET /api/profile/get - Get user profile
+profileRouter.get('/get', requireUserAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { name, profession, address, city, email, age } = req.body;
-
-    const trimmedName = String(name || '').trim();
-    const trimmedProfession = String(profession || '').trim();
-    const trimmedAddress = String(address || '').trim();
-    const trimmedCity = String(city || '').trim();
-    const trimmedEmail = String(email || '').trim();
-    const parsedAge = age ? Number(age) : null;
-
-    // Check if required profile fields for completion are filled
-    const isCompleted = trimmedName.length > 0 && trimmedCity.length > 0 ? 1 : 0;
 
     if (isDbConnected() && userPool) {
-      // Upsert into user_profiles
-      const [existing]: any = await userPool.query('SELECT id FROM user_profiles WHERE user_id = ?', [userId]);
-      if (existing.length > 0) {
-        await userPool.query(
-          `UPDATE user_profiles 
-           SET name = ?, profession = ?, address = ?, city = ?, email = ?, age = ?, updated_at = NOW() 
-           WHERE user_id = ?`,
-          [trimmedName, trimmedProfession, trimmedAddress, trimmedCity, trimmedEmail, parsedAge, userId]
-        );
-      } else {
-        try {
-          await userPool.query(
-            `INSERT INTO user_profiles (user_id, name, profession, address, city, email, age) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [userId, trimmedName, trimmedProfession, trimmedAddress, trimmedCity, trimmedEmail, parsedAge]
-          );
-        } catch (insertErr) {
-          try {
-            await userPool.query(
-              `INSERT INTO user_profiles (user_id, name, profession, address, city, phone_number, email, age) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-              [userId, trimmedName, trimmedProfession, trimmedAddress, trimmedCity, req.user!.phone_number, trimmedEmail, parsedAge]
-            );
-          } catch (_) {}
-        }
-      }
-
-      // Update profile_completed flag on users table
-      await userPool.query('UPDATE users SET profile_completed = ? WHERE id = ?', [isCompleted, userId]);
-
-      const [profiles]: any = await userPool.query('SELECT * FROM user_profiles WHERE user_id = ?', [userId]);
+      const [profiles]: any = await userPool.query(
+        'SELECT * FROM user_profiles WHERE user_id = ?',
+        [userId]
+      );
 
       return res.json({
         success: true,
-        message: 'Profile updated successfully.',
-        user: {
-          id: userId,
-          phone_number: req.user!.phone_number,
-          status: req.user!.status,
-          profile_completed: isCompleted,
-          name: trimmedName,
-          profile: profiles[0],
-        },
+        profile: profiles[0] || {}
       });
     } else {
-      let profile = fallbackStore.userDb.user_profiles.find(p => p.user_id === userId);
-      const now = new Date().toISOString();
+      const profile = fallbackStore.userDb.user_profiles.find(p => p.user_id === userId);
+      return res.json({
+        success: true,
+        profile: profile || {}
+      });
+    }
+  } catch (err: any) {
+    console.error('Get Profile Error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to retrieve profile.' });
+  }
+});
+
+// PUT /api/profile/update - Update user profile
+profileRouter.put('/update', requireUserAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { name, email, city, profession, address, age, phone_number } = req.body;
+
+    if (isDbConnected() && userPool) {
+      await userPool.query(
+        `UPDATE user_profiles SET 
+          name = ?, email = ?, city = ?, profession = ?, address = ?, age = ?, updated_at = NOW()
+        WHERE user_id = ?`,
+        [name, email, city, profession, address, age, userId]
+      );
+
+      // Update profile_completed status
+      const profileCompleted = name && email ? 1 : 0;
+      await userPool.query(
+        'UPDATE users SET profile_completed = ? WHERE id = ?',
+        [profileCompleted, userId]
+      );
+
+      const [updatedProfile]: any = await userPool.query(
+        'SELECT * FROM user_profiles WHERE user_id = ?',
+        [userId]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        profile: updatedProfile[0] || {}
+      });
+    } else {
+      const profile = fallbackStore.userDb.user_profiles.find(p => p.user_id === userId);
       if (profile) {
-        profile.name = trimmedName;
-        profile.profession = trimmedProfession;
-        profile.address = trimmedAddress;
-        profile.city = trimmedCity;
-        profile.email = trimmedEmail;
-        profile.age = parsedAge;
-        profile.updated_at = now;
-      } else {
-        profile = {
-          id: fallbackStore.userDb.user_profiles.length + 1,
-          user_id: userId,
-          name: trimmedName,
-          profession: trimmedProfession,
-          address: trimmedAddress,
-          city: trimmedCity,
-          phone_number: req.user!.phone_number,
-          email: trimmedEmail,
-          age: parsedAge,
-          created_at: now,
-          updated_at: now,
-        };
-        fallbackStore.userDb.user_profiles.push(profile);
+        profile.name = name || profile.name;
+        profile.email = email || profile.email;
+        profile.city = city || profile.city;
+        profile.profession = profession || profile.profession;
+        profile.address = address || profile.address;
+        profile.age = age || profile.age;
+        profile.updated_at = new Date().toISOString();
       }
 
       const user = fallbackStore.userDb.users.find(u => u.id === userId);
       if (user) {
-        user.profile_completed = isCompleted;
-        user.updated_at = now;
+        user.profile_completed = name && email ? 1 : 0;
       }
 
       return res.json({
         success: true,
-        message: 'Profile updated successfully.',
-        user: {
-          id: userId,
-          phone_number: req.user!.phone_number,
-          status: req.user!.status,
-          profile_completed: isCompleted,
-          name: trimmedName,
-          profile,
-        },
+        message: 'Profile updated successfully',
+        profile: profile || {}
       });
     }
   } catch (err: any) {
-    console.error('Profile Update Error:', err);
-    return res.status(500).json({ success: false, error: 'Could not save profile changes.' });
+    console.error('Update Profile Error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update profile.' });
   }
-};
-
-profileRouter.put(['/', '/update', '/update.php'], requireUserAuth, handleProfileUpdate);
-profileRouter.post(['/', '/update', '/update.php'], requireUserAuth, handleProfileUpdate);
+});
