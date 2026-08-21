@@ -197,7 +197,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   }
 
   // If user profile is not complete (requires Name, Email, DOB, Place)
-  if (!profileStats.isReady) {
+  if (!profileStats.isReady && !currentUser.profileCompleted) {
     return (
       <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
         <div className="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 text-center relative animate-in fade-in zoom-in-95 duration-200">
@@ -297,7 +297,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="font-semibold">
-                Unique Paper Confirmed! Eligible for ₹5 Creator Reward upon quick verification.
+                Unique Paper Confirmed! Ready for instant community publishing upon review.
               </span>
             </div>
           )}

@@ -121,6 +121,16 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900">{currentUser.name}</h1>
+              {(profileStats.percent >= 100 || currentUser.profileCompleted) ? (
+                <span
+                  className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0"
+                  title="Profile Verified"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                  </svg>
+                </span>
+              ) : null}
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold capitalize">
                 Student Contributor
               </span>

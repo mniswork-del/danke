@@ -52,7 +52,6 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
   );
   const [institution, setInstitution] = useState(currentUser.institution || '');
   const [course, setCourse] = useState(currentUser.course || '');
-  const [payoutUpiId, setPayoutUpiId] = useState(currentUser.payoutUpiId || '');
   const [isSavedSuccess, setIsSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -69,7 +68,6 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       setCategory((currentUser.educationCategory as EducationCategory) || 'college');
       setInstitution(currentUser.institution || '');
       setCourse(currentUser.course || '');
-      setPayoutUpiId(currentUser.payoutUpiId || '');
     }
   }, [currentUser, isOpen]);
 
@@ -138,8 +136,8 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       educationCategory: category,
       institution: institution.trim() || 'University / Board',
       course: course.trim() || 'General Studies',
-      payoutUpiId: payoutUpiId.trim() || `${currentUser.mobile}@upi`,
-      payoutAccountName: fullName.trim(),
+      profileCompleted: true,
+      profileCompletionPercent: 100,
     });
 
     if (typeof onProfileUpdated === 'function') {
@@ -150,6 +148,11 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
     }
     setIsSavedSuccess(true);
 
+    // Immediately close modal after triggering update so user never gets stuck
+    setTimeout(() => {
+      onClose();
+    }, 250);
+
     try {
       // Send direct update to Hostinger MySQL profile table with phone number fallback & token
       await profileApi.updateProfile({
@@ -159,15 +162,12 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
         city: place.trim(),
         email: email.trim(),
         phone_number: currentUser.mobile,
+        dob: dob || '2000-01-01',
       } as any);
     } catch (apiErr) {
       console.warn('Backend profile update note:', apiErr);
     } finally {
       setIsSaving(false);
-      setTimeout(() => {
-        setIsSavedSuccess(false);
-        onClose();
-      }, 600);
     }
   };
 
@@ -204,7 +204,7 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
             </span>
             {actionReason === 'upload' && (
               <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 text-[11px] font-bold">
-                Required for Upload & ₹5 Rewards
+                Required for Uploading Question Papers
               </span>
             )}
             {actionReason === 'download' && (
@@ -417,23 +417,6 @@ export const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-hidden focus:border-emerald-500 bg-slate-50"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* 9. UPI ID for ₹5 Upload Rewards (Optional) */}
-          <div className="pt-2">
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Payout UPI ID <span className="text-slate-400 font-normal">(for earning ₹5 per approved paper)</span>
-            </label>
-            <div className="relative">
-              <Wallet className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-              <input
-                type="text"
-                value={payoutUpiId}
-                onChange={e => setPayoutUpiId(e.target.value)}
-                placeholder="e.g. yourname@oksbi or 9876543210@paytm"
-                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-hidden focus:border-emerald-500 bg-slate-50"
-              />
             </div>
           </div>
 

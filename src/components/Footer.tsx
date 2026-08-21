@@ -130,7 +130,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenUpload }) => {
               onClick={onOpenUpload}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs shadow-2xs cursor-pointer transition-all"
             >
-              Upload Paper & Earn ₹5
+              Upload Question Paper
             </button>
           </div>
         </div>

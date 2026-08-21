@@ -191,21 +191,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                 </div>
 
-                {/* Percentage Badge */}
-                <span
-                  className={`text-[11px] font-black px-2 py-0.5 rounded-full flex items-center space-x-1 ${
-                    profileStats.percent >= 100
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : profileStats.percent >= 50
-                      ? 'bg-amber-100 text-amber-900'
-                      : 'bg-rose-100 text-rose-800'
-                  }`}
-                >
-                  {profileStats.percent >= 100 ? (
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  ) : null}
-                  <span>{profileStats.percent}%</span>
-                </span>
+                {/* Percentage / Verified Blue Tick Badge */}
+                {profileStats.percent >= 100 || currentUser.profileCompleted ? (
+                  <span
+                    className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs"
+                    title="Profile Verified (100% Completed)"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                    </svg>
+                  </span>
+                ) : (
+                  <span
+                    className={`text-[11px] font-black px-2 py-0.5 rounded-full flex items-center space-x-1 ${
+                      profileStats.percent >= 50
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    <span>{profileStats.percent}%</span>
+                  </span>
+                )}
               </button>
             ) : (
               <button
@@ -227,40 +233,66 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0">
                       {currentUser.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="truncate">
-                      <p className="text-xs font-black text-slate-900 truncate">{currentUser.name}</p>
+                    <div className="truncate flex-1">
+                      <div className="flex items-center space-x-1.5">
+                        <p className="text-xs font-black text-slate-900 truncate">{currentUser.name}</p>
+                        {(profileStats.percent >= 100 || currentUser.profileCompleted) && (
+                          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                            <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
+                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-slate-500 font-mono">+91 {currentUser.mobile}</p>
                     </div>
                   </div>
 
-                  {/* Profile Completion Callout Box */}
-                  <div className="mt-3 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1.5">
-                      <span>Profile Completion:</span>
-                      <span className="font-extrabold text-emerald-700">{profileStats.percent}%</span>
-                    </div>
-                    
-                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-2">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
-                        style={{ width: `${profileStats.percent}%` }}
-                      />
-                    </div>
+                  {/* Show profile completion progress ONLY if profile is NOT done */}
+                  {!(profileStats.percent >= 100 || currentUser.profileCompleted) && (
+                    <div className="mt-3 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1.5">
+                        <span>Profile Completion:</span>
+                        <span className="font-extrabold text-amber-700">{profileStats.percent}%</span>
+                      </div>
+                      
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-2">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all"
+                          style={{ width: `${profileStats.percent}%` }}
+                        />
+                      </div>
 
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          if (onOpenProfileCompletion) onOpenProfileCompletion();
+                        }}
+                        className="w-full py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-extrabold flex items-center justify-between transition-colors cursor-pointer"
+                      >
+                        <span>Complete Profile Details</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="py-1.5">
+                  {/* If profile is NOT done, show Complete Profile button in menu options */}
+                  {!(profileStats.percent >= 100 || currentUser.profileCompleted) && (
                     <button
                       onClick={() => {
                         setUserDropdownOpen(false);
                         if (onOpenProfileCompletion) onOpenProfileCompletion();
                       }}
-                      className="w-full py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-extrabold flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full text-left px-5 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 flex items-center space-x-2.5 cursor-pointer"
                     >
-                      <span>{profileStats.percent === 100 ? 'View / Edit Profile' : 'Complete Profile Details'}</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      <span>Complete Profile ({profileStats.percent}%)</span>
                     </button>
-                  </div>
-                </div>
+                  )}
 
-                <div className="py-1.5">
+                  {/* ONLY Dashboard option */}
                   <a
                     href="/dashboard"
                     onClick={(e) => {
@@ -271,33 +303,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full text-left px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center space-x-2.5 cursor-pointer"
                   >
                     <GraduationCap className="w-4 h-4 text-emerald-600" />
-                    <span>My Dashboard</span>
-                  </a>
-
-                  <a
-                    href="/dashboard"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setUserDropdownOpen(false);
-                      onOpenUserDashboard();
-                    }}
-                    className="w-full text-left px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center space-x-2.5 cursor-pointer"
-                  >
-                    <FileText className="w-4 h-4 text-emerald-600" />
-                    <span>My Contributions</span>
-                  </a>
-
-                  <a
-                    href="/admin"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setUserDropdownOpen(false);
-                      onOpenAdmin();
-                    }}
-                    className="w-full text-left px-5 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 flex items-center space-x-2.5 cursor-pointer"
-                  >
-                    <ShieldAlert className="w-4 h-4 text-purple-600" />
-                    <span>Admin Portal</span>
+                    <span>Dashboard</span>
                   </a>
                 </div>
 
@@ -324,7 +330,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {currentUser ? (
             <button
               onClick={() => {
-                if (profileStats.percent < 100 && onOpenProfileCompletion) {
+                if (profileStats.percent < 100 && !currentUser.profileCompleted && onOpenProfileCompletion) {
                   onOpenProfileCompletion();
                 } else {
                   onOpenUserDashboard();
@@ -337,15 +343,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-[10px]">
                 {currentUser.name.charAt(0).toUpperCase()}
               </div>
-              <span
-                className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  profileStats.percent >= 100
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-amber-100 text-amber-900'
-                }`}
-              >
-                {profileStats.percent}%
-              </span>
+              {profileStats.percent >= 100 || currentUser.profileCompleted ? (
+                <span
+                  className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs"
+                  title="Profile Verified"
+                >
+                  <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                  </svg>
+                </span>
+              ) : (
+                <span
+                  className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                    profileStats.percent >= 50
+                      ? 'bg-amber-100 text-amber-900'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}
+                >
+                  {profileStats.percent}%
+                </span>
+              )}
             </button>
           ) : (
             <button
@@ -407,50 +424,42 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {currentUser ? (
               <div className="space-y-2 pt-1">
-                {/* Profile progress box */}
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="flex items-center justify-between text-xs font-bold mb-1">
-                    <span className="text-slate-700">Profile Completion:</span>
-                    <span className="text-emerald-700 font-extrabold">{profileStats.percent}%</span>
+                {/* Show profile progress ONLY if NOT completed */}
+                {!(profileStats.percent >= 100 || currentUser.profileCompleted) && (
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div className="flex items-center justify-between text-xs font-bold mb-1">
+                      <span className="text-slate-700">Profile Completion:</span>
+                      <span className="text-emerald-700 font-extrabold">{profileStats.percent}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden mb-2">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500"
+                        style={{ width: `${profileStats.percent}%` }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        if (onOpenProfileCompletion) onOpenProfileCompletion();
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Complete Profile ({profileStats.percent}%)</span>
+                    </button>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden mb-2">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                      style={{ width: `${profileStats.percent}%` }}
-                    />
-                  </div>
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      if (onOpenProfileCompletion) onOpenProfileCompletion();
-                    }}
-                    className="w-full py-2 px-3 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>{profileStats.percent === 100 ? 'View Complete Profile' : 'Complete Profile (Name, DOB, Place)'}</span>
-                  </button>
-                </div>
+                )}
 
+                {/* Dashboard button */}
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
                     onOpenUserDashboard();
                   }}
-                  className="w-full py-2.5 rounded-full bg-slate-100 text-slate-800 text-xs font-bold flex items-center justify-center space-x-2 cursor-pointer"
+                  className="w-full py-2.5 rounded-full bg-slate-100 text-slate-800 text-xs font-bold flex items-center justify-center space-x-2 cursor-pointer hover:bg-slate-200 transition-colors"
                 >
                   <GraduationCap className="w-4 h-4 text-emerald-600" />
-                  <span>My Dashboard ({currentUser.name})</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenAdmin();
-                  }}
-                  className="w-full py-2.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold flex items-center justify-center space-x-2 cursor-pointer"
-                >
-                  <ShieldAlert className="w-4 h-4" />
-                  <span>Admin Portal</span>
+                  <span>Dashboard</span>
                 </button>
 
                 <button
@@ -458,7 +467,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setMobileMenuOpen(false);
                     onLogout();
                   }}
-                  className="w-full py-2.5 rounded-full text-rose-600 bg-rose-50 text-xs font-bold flex items-center justify-center space-x-1 cursor-pointer"
+                  className="w-full py-2.5 rounded-full text-rose-600 bg-rose-50 text-xs font-bold flex items-center justify-center space-x-1 cursor-pointer hover:bg-rose-100 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
