@@ -68,6 +68,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     else if (path === '/auth/register') finalEndpoint = `/auth/register.php${qs}`;
     else if (path === '/auth/logout') finalEndpoint = `/auth/logout.php${qs}`;
     else if (path === '/auth/me') finalEndpoint = `/auth/me.php${qs}`;
+    else if (path === '/profile/save') finalEndpoint = `/profile/save.php${qs}`;
     else if (path === '/profile' || path === '/profile/update') finalEndpoint = `/profile/update.php${qs}`;
     else if (path === '/profile/get') finalEndpoint = `/profile/get.php${qs}`;
     else if (path === '/papers' || path === '/papers/list') finalEndpoint = `/papers/list.php${qs}`;
@@ -164,7 +165,7 @@ export const authApi = {
 // ========================================================
 export const profileApi = {
   async getProfile() {
-    const res = await request<{ success: boolean; user: any }>('/profile');
+    const res = await request<{ success: boolean; user: any }>('/profile/get.php');
     return res.user;
   },
 
@@ -175,16 +176,38 @@ export const profileApi = {
     city?: string;
     email?: string;
     age?: number | null;
+    phone_number?: string;
+    mobile?: string;
+    dob?: string;
+    course?: string;
+    institution?: string;
   }) {
+    // Try dedicated save.php first
+    try {
+      const res = await request<{
+        success: boolean;
+        message: string;
+        user: any;
+      }>('/profile/save.php', {
+        method: 'POST',
+        body: JSON.stringify(profileData),
+      });
+      if (res && res.user) return res;
+    } catch {}
+
     const res = await request<{
       success: boolean;
       message: string;
       user: any;
-    }>('/profile', {
-      method: 'PUT',
+    }>('/profile/update.php', {
+      method: 'POST',
       body: JSON.stringify(profileData),
     });
     return res;
+  },
+
+  async saveProfile(profileData: Record<string, any>) {
+    return this.updateProfile(profileData);
   },
 };
 
