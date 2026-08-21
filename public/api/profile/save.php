@@ -72,7 +72,7 @@ if (!$userId && $userDb && !empty($token)) {
     } catch (\Throwable $e) {}
 }
 
-// 3. Fallback: Find User ID by phone number
+// 3. Fallback: Find User ID by phone number, or auto-create in MySQL
 if (!$userId && $userDb && !empty($cleanPhone)) {
     try {
         $stmt = $userDb->prepare("SELECT id FROM users WHERE phone_number = ? LIMIT 1");
@@ -80,6 +80,10 @@ if (!$userId && $userDb && !empty($cleanPhone)) {
         $u = $stmt->fetch();
         if ($u) {
             $userId = (int)$u['id'];
+        } else {
+            $createStmt = $userDb->prepare("INSERT INTO users (phone_number, password_hash, status, profile_completed, created_at) VALUES (?, ?, 'active', 1, NOW())");
+            $createStmt->execute([$cleanPhone, password_hash('student123', PASSWORD_BCRYPT)]);
+            $userId = (int)$userDb->lastInsertId();
         }
     } catch (\Throwable $e) {}
 }
@@ -130,7 +134,8 @@ if ($userDb && $userId) {
         $userRow = $fetchStmt->fetch();
 
         send_json_response([
-            'message' => 'User details saved successfully.',
+            'message' => 'User details saved to Hostinger database successfully.',
+            'db_synced' => true,
             'user' => [
                 'id' => (int)$userRow['id'],
                 'phone_number' => $userRow['phone_number'],
@@ -148,7 +153,7 @@ if ($userDb && $userId) {
         ]);
 
     } catch (\PDOException $e) {
-        // Continue to fallback response below
+        $GLOBALS['DB_ERRORS']['user'] = $e->getMessage();
     }
 }
 

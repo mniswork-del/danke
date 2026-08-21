@@ -1,6 +1,6 @@
 export type Role = 'student' | 'teacher' | 'contributor' | 'admin';
 
-export type ItemType = 'pyq' | 'ebook' | 'answer_key';
+export type ItemType = 'pyq' | 'ebook' | 'answer_key' | 'note';
 
 export type FileCategory = 'pdf' | 'image' | 'ppt' | 'doc' | 'text' | 'other';
 
@@ -142,6 +142,31 @@ export interface AnswerKeyItem {
   pagesCount?: number;
   verifiedByTeacher: boolean;
   uploadDate: string;
+  status: 'APPROVED' | 'PENDING';
+}
+
+export interface NoteItem {
+  id: string;
+  title: string;
+  subject: string;
+  category: EducationCategory | string;
+  course: string;
+  semester?: string;
+  institution?: string;
+  author: string;
+  authorRole?: 'Topper' | 'Faculty' | 'Gold Medalist' | 'Scholar' | 'Educator';
+  isHandwritten: boolean;
+  topics: string[];
+  pageCount: number;
+  fileSize: string;
+  fileUrl: string;
+  previewImage?: string;
+  rating?: number;
+  viewsCount: number;
+  downloadsCount: number;
+  likesCount?: number;
+  uploadDate: string;
+  description: string;
   status: 'APPROVED' | 'PENDING';
 }
 

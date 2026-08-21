@@ -3,7 +3,8 @@ import {
   User, 
   ContentReport, 
   EBookItem, 
-  AnswerKeyItem, 
+  AnswerKeyItem,
+  NoteItem,
   PaymentRecord, 
   AuditLog, 
   UploadStatus, 
@@ -14,7 +15,8 @@ import {
   SEED_PAPERS, 
   SEED_USERS, 
   SEED_EBOOKS, 
-  SEED_ANSWER_KEYS, 
+  SEED_ANSWER_KEYS,
+  SEED_NOTES,
   SEED_PAYMENTS, 
   SEED_REPORTS 
 } from '../data/mockData';
@@ -35,6 +37,7 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'paperhub_current_user_v2',
   EBOOKS: 'paperhub_ebooks_v2',
   ANSWER_KEYS: 'paperhub_answer_keys_v2',
+  NOTES: 'paperhub_notes_v2',
   PAYMENTS: 'paperhub_payments_v2',
   REPORTS: 'paperhub_reports_v2',
   AUDIT_LOGS: 'paperhub_audit_logs_v2',
@@ -63,6 +66,10 @@ export function initStorage() {
 
   if (!localStorage.getItem(STORAGE_KEYS.ANSWER_KEYS)) {
     localStorage.setItem(STORAGE_KEYS.ANSWER_KEYS, JSON.stringify(SEED_ANSWER_KEYS));
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.NOTES)) {
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(SEED_NOTES));
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.PAYMENTS)) {
@@ -906,6 +913,68 @@ export function saveAnswerKey(ansKey: Omit<AnswerKeyItem, 'id' | 'uploadDate' | 
   }
 
   return newKey;
+}
+
+// ----------------------------------------------------
+// Study Notes & Topper Material Storage
+// ----------------------------------------------------
+
+export function getAllNotes(): NoteItem[] {
+  initStorage();
+  const raw = localStorage.getItem(STORAGE_KEYS.NOTES);
+  try {
+    if (!raw) return SEED_NOTES;
+    const list: NoteItem[] = JSON.parse(raw);
+    if (!Array.isArray(list) || list.length === 0) return SEED_NOTES;
+    return list;
+  } catch {
+    return SEED_NOTES;
+  }
+}
+
+export function saveNote(note: Omit<NoteItem, 'id' | 'viewsCount' | 'downloadsCount' | 'uploadDate' | 'status'>): NoteItem {
+  const notes = getAllNotes();
+  const newNote: NoteItem = {
+    ...note,
+    id: `note-${Date.now()}`,
+    viewsCount: 0,
+    downloadsCount: 0,
+    likesCount: 0,
+    uploadDate: new Date().toISOString().split('T')[0],
+    status: 'APPROVED',
+  };
+  notes.unshift(newNote);
+  localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+  return newNote;
+}
+
+export function incrementNoteDownload(noteId: string) {
+  const notes = getAllNotes();
+  const idx = notes.findIndex(n => n.id === noteId);
+  if (idx !== -1) {
+    notes[idx].downloadsCount += 1;
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+  }
+}
+
+export function incrementNoteView(noteId: string) {
+  const notes = getAllNotes();
+  const idx = notes.findIndex(n => n.id === noteId);
+  if (idx !== -1) {
+    notes[idx].viewsCount += 1;
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+  }
+}
+
+export function toggleNoteLike(noteId: string): number {
+  const notes = getAllNotes();
+  const idx = notes.findIndex(n => n.id === noteId);
+  if (idx !== -1) {
+    notes[idx].likesCount = (notes[idx].likesCount || 0) + 1;
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+    return notes[idx].likesCount;
+  }
+  return 0;
 }
 
 // ----------------------------------------------------

@@ -98,10 +98,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Direct 4 main menus + Guide & Support with proper route paths
+  // Direct main menus with proper route paths
   const navItems = [
     { id: 'home', label: 'Home', path: '/' },
     { id: 'papers', label: 'Question Papers', path: '/papers' },
+    { id: 'notes', label: 'Notes', path: '/notes' },
     { id: 'ebooks', label: 'E-Books', path: '/ebooks' },
     { id: 'answer-keys', label: 'Answer Keys', path: '/answer-keys' },
     { id: 'support', label: 'Guide & Support', path: '/support' },

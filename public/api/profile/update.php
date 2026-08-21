@@ -50,7 +50,7 @@ if (!$userId && $userDb && !empty($token)) {
     } catch (\Throwable $e) {}
 }
 
-// 2. Fallback: resolve user by phone_number / mobile
+// 2. Fallback: resolve user by phone_number / mobile, or auto-create in MySQL
 if (!$userId && $userDb && !empty($phone_number)) {
     try {
         $cleanPhone = substr(preg_replace('/\D/', '', $phone_number), -10);
@@ -59,6 +59,10 @@ if (!$userId && $userDb && !empty($phone_number)) {
         $u = $stmt->fetch();
         if ($u) {
             $userId = (int)$u['id'];
+        } else {
+            $createStmt = $userDb->prepare("INSERT INTO users (phone_number, password_hash, status, profile_completed, created_at) VALUES (?, ?, 'active', 1, NOW())");
+            $createStmt->execute([$cleanPhone, password_hash('student123', PASSWORD_BCRYPT)]);
+            $userId = (int)$userDb->lastInsertId();
         }
     } catch (\Throwable $e) {}
 }
@@ -104,7 +108,8 @@ if ($userDb && $userId) {
         $user = $stmt->fetch();
 
         send_json_response([
-            'message' => 'Profile updated successfully.',
+            'message' => 'Profile updated and saved to Hostinger database successfully.',
+            'db_synced' => true,
             'user' => [
                 'id' => (int)$user['id'],
                 'phone_number' => $user['phone_number'],
@@ -120,7 +125,7 @@ if ($userDb && $userId) {
             ]
         ]);
     } catch (\Throwable $e) {
-        // Log & fall through to standard JSON response
+        $GLOBALS['DB_ERRORS']['user'] = $e->getMessage();
     }
 }
 

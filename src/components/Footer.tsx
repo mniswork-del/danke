@@ -55,6 +55,18 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenUpload }) => {
               </li>
               <li>
                 <a
+                  href="/notes"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('notes');
+                  }}
+                  className="hover:text-emerald-700 cursor-pointer block"
+                >
+                  Study Notes & Sheets
+                </a>
+              </li>
+              <li>
+                <a
                   href="/ebooks"
                   onClick={(e) => {
                     e.preventDefault();

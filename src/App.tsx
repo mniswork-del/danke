@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { User, PaperItem, EBookItem, AnswerKeyItem, PaymentRecord, ContentReport, AuditLog } from './types';
+import { User, PaperItem, EBookItem, AnswerKeyItem, NoteItem, PaymentRecord, ContentReport, AuditLog } from './types';
 import {
   getCurrentUser,
   setCurrentUser,
   getAllPapers,
   getAllEBooks,
   getAllAnswerKeys,
+  getAllNotes,
   getAllUsers,
   getAllPayments,
   getAllReports,
@@ -27,6 +28,7 @@ import { HeroSection } from './components/HeroSection';
 import { PathFinderSection } from './components/PathFinderSection';
 import { SearchModal } from './components/SearchModal';
 import { PapersCatalogView } from './components/PapersCatalogView';
+import { NotesSection } from './components/NotesSection';
 import { EBooksSection } from './components/EBooksSection';
 import { AnswerKeysSection } from './components/AnswerKeysSection';
 import { HowItWorksSection } from './components/HowItWorksSection';
@@ -62,6 +64,9 @@ const getRouteFromUrl = () => {
   if (path.startsWith('/papers') || path.startsWith('/paper') || path.startsWith('/question-papers') || hash.startsWith('papers') || hash.startsWith('paper')) {
     return { tab: 'papers', paperId, category };
   }
+  if (path.startsWith('/notes') || path.startsWith('/note') || hash.startsWith('notes') || hash.startsWith('note')) {
+    return { tab: 'notes', paperId, category };
+  }
   if (path.startsWith('/ebooks') || path.startsWith('/ebook') || hash.startsWith('ebooks') || hash.startsWith('ebook')) {
     return { tab: 'ebooks', paperId, category };
   }
@@ -87,6 +92,7 @@ const getUrlForTab = (tab: string, paperId?: string | null, category?: string | 
     if (category) return `/papers?category=${encodeURIComponent(category)}`;
     return '/papers';
   }
+  if (tab === 'notes') return '/notes';
   if (tab === 'ebooks') return '/ebooks';
   if (tab === 'answer-keys') return '/answer-keys';
   if (tab === 'support') return '/support';
@@ -103,6 +109,7 @@ export default function App() {
 
   // Application Data States
   const [papers, setPapers] = useState<PaperItem[]>(() => getAllPapers());
+  const [notes, setNotes] = useState<NoteItem[]>(() => getAllNotes());
   const [ebooks, setEbooks] = useState<EBookItem[]>(() => getAllEBooks());
   const [answerKeys, setAnswerKeys] = useState<AnswerKeyItem[]>(() => getAllAnswerKeys());
   const [users, setUsers] = useState<User[]>(() => getAllUsers());
@@ -125,6 +132,7 @@ export default function App() {
   const refreshAppData = async () => {
     initStorage();
     setPapers(getAllPapers());
+    setNotes(getAllNotes());
     setEbooks(getAllEBooks());
     setAnswerKeys(getAllAnswerKeys());
     setUsers(getAllUsers());
@@ -417,12 +425,20 @@ export default function App() {
           />
         )}
 
-        {/* Tab 3: Free E-Books */}
+        {/* Tab 3: Study Notes & Fast Revision */}
+        {activeTab === 'notes' && (
+          <NotesSection
+            notes={notes}
+            onOpenUpload={() => setIsUploadOpen(true)}
+          />
+        )}
+
+        {/* Tab 4: Free E-Books */}
         {activeTab === 'ebooks' && (
           <EBooksSection ebooks={ebooks} />
         )}
 
-        {/* Tab 4: Answer Keys */}
+        {/* Tab 5: Answer Keys */}
         {activeTab === 'answer-keys' && (
           <AnswerKeysSection
             answerKeys={answerKeys}
