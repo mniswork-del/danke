@@ -18,6 +18,16 @@ import {
   SEED_PAYMENTS, 
   SEED_REPORTS 
 } from '../data/mockData';
+import {
+  saveUserToFirestore,
+  savePaperToFirestore,
+  updatePaperStatusInFirestore,
+  saveEBookToFirestore,
+  saveAnswerKeyToFirestore,
+  saveReportToFirestore,
+  saveAuditLogToFirestore,
+  getUserFromFirestore,
+} from './firestoreService';
 
 const STORAGE_KEYS = {
   PAPERS: 'paperhub_papers_v2',
@@ -265,6 +275,10 @@ export function saveRegisteredUserSession(user: Partial<User> & { mobile: string
 
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(safeUsersList));
   setCurrentUser(finalizedUser);
+
+  // Sync permanently to Cloud Firestore database online
+  saveUserToFirestore(finalizedUser).catch(err => console.warn('Firestore user sync note:', err));
+
   return finalizedUser;
 }
 
@@ -448,6 +462,10 @@ export function updateUserProfile(userId: string, profileData: Partial<User>): U
 
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   setCurrentUser(finalizedUser);
+
+  // Sync permanently to Cloud Firestore database online
+  saveUserToFirestore(finalizedUser).catch(err => console.warn('Firestore profile sync note:', err));
+
   return finalizedUser;
 }
 
@@ -659,6 +677,9 @@ export function saveUploadedPaper(paperData: {
   papers.unshift(newPaper);
   localStorage.setItem(STORAGE_KEYS.PAPERS, JSON.stringify(papers));
 
+  // Sync paper to Firestore online cloud database
+  savePaperToFirestore(newPaper).catch(err => console.warn('Firestore paper sync note:', err));
+
   // Update user uploads & rewards
   const users = getAllUsers();
   const uIdx = users.findIndex(u => u.id === paperData.uploader.id);
@@ -673,6 +694,7 @@ export function saveUploadedPaper(paperData: {
     }
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     setCurrentUser(users[uIdx]);
+    saveUserToFirestore(users[uIdx]).catch(err => console.warn('Firestore uploader sync note:', err));
   }
 
   return { paper: newPaper, duplicateResult };
@@ -702,6 +724,7 @@ export function updatePaperStatus(
   }
 
   localStorage.setItem(STORAGE_KEYS.PAPERS, JSON.stringify(papers));
+  updatePaperStatusInFirestore(paperId, newStatus, reason).catch(err => console.warn('Firestore status update note:', err));
 
   // Audit log
   logAuditAction({
@@ -822,6 +845,7 @@ export function saveEBook(ebook: Omit<EBookItem, 'id' | 'viewsCount' | 'download
   };
   ebooks.unshift(newBook);
   localStorage.setItem(STORAGE_KEYS.EBOOKS, JSON.stringify(ebooks));
+  saveEBookToFirestore(newBook).catch(err => console.warn('Firestore ebook sync note:', err));
   return newBook;
 }
 
@@ -869,6 +893,7 @@ export function saveAnswerKey(ansKey: Omit<AnswerKeyItem, 'id' | 'uploadDate' | 
   };
   keys.unshift(newKey);
   localStorage.setItem(STORAGE_KEYS.ANSWER_KEYS, JSON.stringify(keys));
+  saveAnswerKeyToFirestore(newKey).catch(err => console.warn('Firestore answerKey sync note:', err));
 
   // Link to paper
   const papers = getAllPapers();
@@ -877,6 +902,7 @@ export function saveAnswerKey(ansKey: Omit<AnswerKeyItem, 'id' | 'uploadDate' | 
     papers[pIdx].hasSolutions = true;
     papers[pIdx].answerKeyId = newKey.id;
     localStorage.setItem(STORAGE_KEYS.PAPERS, JSON.stringify(papers));
+    savePaperToFirestore(papers[pIdx]).catch(err => console.warn('Firestore paper link note:', err));
   }
 
   return newKey;
@@ -992,6 +1018,7 @@ export function submitContentReport(report: Omit<ContentReport, 'id' | 'status' 
   };
   reports.unshift(newReport);
   localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+  saveReportToFirestore(newReport).catch(err => console.warn('Firestore report sync note:', err));
   return newReport;
 }
 
@@ -1002,6 +1029,7 @@ export function updateReportStatus(reportId: string, status: 'RESOLVED' | 'DISMI
     reports[idx].status = status;
     if (adminNote) reports[idx].adminNote = adminNote;
     localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+    saveReportToFirestore(reports[idx]).catch(err => console.warn('Firestore report status note:', err));
   }
 }
 
@@ -1028,6 +1056,7 @@ export function logAuditAction(log: Omit<AuditLog, 'id' | 'timestamp'>) {
   };
   logs.unshift(newLog);
   localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs));
+  saveAuditLogToFirestore(newLog).catch(err => console.warn('Firestore auditLog sync note:', err));
 }
 
 // ----------------------------------------------------

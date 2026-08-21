@@ -14,6 +14,12 @@ import {
   calculateProfileCompletion,
 } from './lib/storage';
 import { authApi, paperApi } from './lib/api';
+import {
+  getUserFromFirestore,
+  getPapersFromFirestore,
+  subscribeToOnlinePapers,
+  subscribeToOnlineUser,
+} from './lib/firestoreService';
 
 // Component Imports
 import { Navbar } from './components/Navbar';
@@ -127,14 +133,44 @@ export default function App() {
     setAuditLogs(getAuditLogs());
     setCurrentUserState(getCurrentUser());
 
-    // Fetch live papers from backend
+    // Fetch live papers from backend & Firestore Cloud Database
     try {
-      const livePapers = await paperApi.getPapers();
-      if (livePapers && livePapers.length > 0) {
-        setPapers(livePapers);
+      const cloudPapers = await getPapersFromFirestore();
+      if (cloudPapers && cloudPapers.length > 0) {
+        const localPapers = getAllPapers();
+        const mergedMap = new Map<string, PaperItem>();
+        localPapers.forEach(p => mergedMap.set(p.id, p));
+        cloudPapers.forEach(p => mergedMap.set(p.id, p));
+        const mergedList = Array.from(mergedMap.values());
+        setPapers(mergedList);
       }
     } catch (e) {
-      console.warn('Paper fetch note:', e);
+      console.warn('Firestore cloud papers fetch note:', e);
+    }
+
+    // Sync online Firestore profile for logged in user
+    const activeLocalUser = getCurrentUser();
+    if (activeLocalUser?.mobile) {
+      try {
+        const cloudUser = await getUserFromFirestore(activeLocalUser.mobile);
+        if (cloudUser) {
+          const merged: User = {
+            ...activeLocalUser,
+            ...cloudUser,
+            name: (cloudUser.name && !cloudUser.name.startsWith('Student ') && !cloudUser.name.startsWith('User '))
+              ? cloudUser.name
+              : (activeLocalUser.name || cloudUser.name),
+            profileCompleted: Boolean(cloudUser.profileCompleted || (cloudUser.name && !cloudUser.name.startsWith('Student ') && !cloudUser.name.startsWith('User '))),
+            profileCompletionPercent: typeof cloudUser.profileCompletionPercent === 'number'
+              ? cloudUser.profileCompletionPercent
+              : (cloudUser.profileCompleted ? 100 : activeLocalUser.profileCompletionPercent),
+          };
+          setCurrentUser(merged);
+          setCurrentUserState(merged);
+        }
+      } catch (err) {
+        console.warn('Firestore user profile sync note:', err);
+      }
     }
 
     // Verify session
@@ -187,6 +223,18 @@ export default function App() {
   useEffect(() => {
     refreshAppData();
 
+    // Subscribe to real-time online paper updates from Firestore
+    const unsubscribePapers = subscribeToOnlinePapers((onlinePapers) => {
+      if (onlinePapers && onlinePapers.length > 0) {
+        setPapers((prev) => {
+          const map = new Map<string, PaperItem>();
+          prev.forEach(p => map.set(p.id, p));
+          onlinePapers.forEach(p => map.set(p.id, p));
+          return Array.from(map.values());
+        });
+      }
+    });
+
     // Check URL path / query / hash on route change
     const checkRoute = () => {
       const { tab, paperId, category } = getRouteFromUrl();
@@ -218,6 +266,7 @@ export default function App() {
     window.addEventListener('popstate', checkRoute);
     window.addEventListener('hashchange', checkRoute);
     return () => {
+      unsubscribePapers();
       window.removeEventListener('popstate', checkRoute);
       window.removeEventListener('hashchange', checkRoute);
     };

@@ -17,6 +17,11 @@ import {
 } from 'lucide-react';
 import { authApi } from '../lib/api';
 import { setCurrentUser, saveRegisteredUserSession } from '../lib/storage';
+import {
+  authenticateWithFirestore,
+  saveUserToFirestore,
+  getUserFromFirestore,
+} from '../lib/firestoreService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -99,44 +104,50 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const data = await authApi.register(cleanPhone, password);
-
-      if (data && (data.success !== false && (data.token || data.user || data.success === true))) {
-        setSuccessMessage('Account registered successfully!');
-        
-        const registeredUser: User = {
-          id: String(data.user?.id || Date.now()),
-          mobile: cleanPhone,
-          name: data.user?.profile?.name || `User ${cleanPhone.slice(-4)}`,
-          city: data.user?.profile?.city || '',
-          email: data.user?.profile?.email || '',
-          profileCompleted: Boolean(data.user?.profile_completed),
-          role: 'student',
-          status: 'active',
-          otpVerified: true,
-          uploadedCount: 0,
-          approvedCount: 0,
-          rejectedCount: 0,
-          duplicateCount: 0,
-          pendingCount: 0,
-          totalViews: 0,
-          totalDownloads: 0,
-          totalEarned: 0,
-          pendingPayment: 0,
-          totalPaid: 0,
-          joinedDate: new Date().toISOString().split('T')[0],
-        };
-
-        saveRegisteredUserSession(registeredUser);
-        setCurrentUser(registeredUser);
-
-        setTimeout(() => {
-          onLoginSuccess(registeredUser);
-          onClose();
-        }, 500);
-      } else {
-        setErrorMessage((data as any)?.error || (data as any)?.message || 'Registration failed.');
+      // 1. Authenticate & Register in Firestore Cloud Database
+      const firestoreRes = await authenticateWithFirestore(cleanPhone, password);
+      if (firestoreRes.error) {
+        setErrorMessage(firestoreRes.error);
+        setIsLoading(false);
+        return;
       }
+
+      // 2. Also register in Backend API
+      authApi.register(cleanPhone, password).catch(e => console.warn('Backend API note:', e));
+
+      setSuccessMessage('Account registered successfully!');
+      
+      const registeredUser: User = firestoreRes.user || {
+        id: `usr-${Date.now()}`,
+        mobile: cleanPhone,
+        name: `Student ${cleanPhone.slice(-4)}`,
+        city: '',
+        email: '',
+        profileCompleted: false,
+        profileCompletionPercent: 20,
+        role: 'student',
+        status: 'active',
+        otpVerified: true,
+        uploadedCount: 0,
+        approvedCount: 0,
+        rejectedCount: 0,
+        duplicateCount: 0,
+        pendingCount: 0,
+        totalViews: 0,
+        totalDownloads: 0,
+        totalEarned: 0,
+        pendingPayment: 0,
+        totalPaid: 0,
+        joinedDate: new Date().toISOString().split('T')[0],
+      };
+
+      const savedUser = saveRegisteredUserSession(registeredUser);
+      setCurrentUser(savedUser);
+
+      setTimeout(() => {
+        onLoginSuccess(savedUser);
+        onClose();
+      }, 500);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Registration failed. Please try again.');
     } finally {
@@ -168,40 +179,76 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const data = await authApi.login(cleanPhone, password);
-
-      if (data && (data.success !== false && (data.token || data.user || data.success === true))) {
-        setSuccessMessage('Logged in successfully!');
-
-        const userObj = data.user || {};
-        const profileObj = userObj.profile || {};
-        
-        const loggedInUser: Partial<User> & { mobile: string } = {
-          id: String(userObj.id || Date.now()),
-          mobile: cleanPhone,
-          name: profileObj.name || userObj.name || '',
-          city: profileObj.city || userObj.city || '',
-          place: profileObj.city || profileObj.address || '',
-          email: profileObj.email || userObj.email || '',
-          institution: profileObj.profession || '',
-          course: profileObj.profession || '',
-          profileCompleted: Boolean(userObj.profile_completed) || Boolean(profileObj.name && profileObj.city),
-          role: 'student',
-          status: userObj.status || 'active',
-          otpVerified: true,
-          joinedDate: userObj.created_at ? new Date(userObj.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        };
-
-        const savedUser = saveRegisteredUserSession(loggedInUser);
-        setCurrentUser(savedUser);
-
-        setTimeout(() => {
-          onLoginSuccess(savedUser);
-          onClose();
-        }, 400);
-      } else {
-        setErrorMessage((data as any)?.error || (data as any)?.message || 'Login failed.');
+      // 1. Check Cloud Firestore online database first for persistent profile
+      const firestoreAuth = await authenticateWithFirestore(cleanPhone, password);
+      
+      if (firestoreAuth.error) {
+        setErrorMessage(firestoreAuth.error);
+        setIsLoading(false);
+        return;
       }
+
+      // 2. Also authenticate against backend API if available
+      let backendUser: any = null;
+      try {
+        const apiData = await authApi.login(cleanPhone, password);
+        if (apiData && apiData.user) {
+          backendUser = apiData.user;
+        }
+      } catch (e) {
+        console.warn('Backend API login note:', e);
+      }
+
+      setSuccessMessage('Logged in successfully!');
+
+      const cloudUser = firestoreAuth.user;
+      const profileObj = backendUser?.profile || {};
+
+      const loggedInUser: Partial<User> & { mobile: string } = {
+        id: cloudUser?.id || String(backendUser?.id || Date.now()),
+        mobile: cleanPhone,
+        name: (cloudUser?.name && !cloudUser.name.startsWith('Student ') && !cloudUser.name.startsWith('User '))
+          ? cloudUser.name
+          : (profileObj.name || cloudUser?.name || `Student ${cleanPhone.slice(-4)}`),
+        email: cloudUser?.email || profileObj.email || '',
+        dob: cloudUser?.dob || '',
+        place: cloudUser?.place || cloudUser?.city || profileObj.city || '',
+        city: cloudUser?.city || cloudUser?.place || profileObj.city || '',
+        state: cloudUser?.state || 'Uttar Pradesh',
+        educationCategory: cloudUser?.educationCategory || 'college',
+        institution: cloudUser?.institution || profileObj.profession || '',
+        course: cloudUser?.course || profileObj.profession || '',
+        preferredSubjects: cloudUser?.preferredSubjects || [],
+        avatarUrl: cloudUser?.avatarUrl || '',
+        payoutUpiId: cloudUser?.payoutUpiId || '',
+        payoutAccountName: cloudUser?.payoutAccountName || '',
+        profileCompleted: Boolean(cloudUser?.profileCompleted) || Boolean(cloudUser?.name && !cloudUser.name.startsWith('Student ') && !cloudUser.name.startsWith('User ')),
+        profileCompletionPercent: typeof cloudUser?.profileCompletionPercent === 'number'
+          ? cloudUser.profileCompletionPercent
+          : (cloudUser?.profileCompleted ? 100 : 20),
+        role: cloudUser?.role || 'student',
+        status: cloudUser?.status || 'active',
+        otpVerified: true,
+        joinedDate: cloudUser?.joinedDate || (backendUser?.created_at ? new Date(backendUser.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+        uploadedCount: cloudUser?.uploadedCount || 0,
+        approvedCount: cloudUser?.approvedCount || 0,
+        rejectedCount: cloudUser?.rejectedCount || 0,
+        duplicateCount: cloudUser?.duplicateCount || 0,
+        pendingCount: cloudUser?.pendingCount || 0,
+        totalViews: cloudUser?.totalViews || 0,
+        totalDownloads: cloudUser?.totalDownloads || 0,
+        totalEarned: cloudUser?.totalEarned || 0,
+        pendingPayment: cloudUser?.pendingPayment || 0,
+        totalPaid: cloudUser?.totalPaid || 0,
+      };
+
+      const savedUser = saveRegisteredUserSession(loggedInUser);
+      setCurrentUser(savedUser);
+
+      setTimeout(() => {
+        onLoginSuccess(savedUser);
+        onClose();
+      }, 400);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Invalid phone number or password.');
     } finally {
