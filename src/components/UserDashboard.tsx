@@ -95,7 +95,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         city: place.trim(),
         address: `${place.trim()}, ${state}`,
         profession: `${course.trim()} at ${institution.trim() || 'University'}`,
-      });
+        phone_number: currentUser.mobile,
+        mobile: currentUser.mobile,
+        dob: dob,
+      } as any);
     } catch (err) {
       console.warn('Backend profile sync note:', err);
     }

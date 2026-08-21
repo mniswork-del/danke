@@ -60,13 +60,29 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   // Ensure endpoint maps cleanly to Hostinger PHP scripts if not already with .php
   let finalEndpoint = endpoint;
-  if (!finalEndpoint.endsWith('.php') && !finalEndpoint.includes('?')) {
-    if (finalEndpoint === '/auth/login') finalEndpoint = '/auth/login.php';
-    else if (finalEndpoint === '/auth/register') finalEndpoint = '/auth/register.php';
-    else if (finalEndpoint === '/auth/logout') finalEndpoint = '/auth/logout.php';
-    else if (finalEndpoint === '/auth/me') finalEndpoint = '/auth/me.php';
-    else if (finalEndpoint === '/profile') finalEndpoint = '/profile/update.php';
-    else if (finalEndpoint === '/profile/get') finalEndpoint = '/profile/get.php';
+  const [path, query] = endpoint.split('?');
+  const qs = query ? `?${query}` : '';
+
+  if (!path.endsWith('.php')) {
+    if (path === '/auth/login') finalEndpoint = `/auth/login.php${qs}`;
+    else if (path === '/auth/register') finalEndpoint = `/auth/register.php${qs}`;
+    else if (path === '/auth/logout') finalEndpoint = `/auth/logout.php${qs}`;
+    else if (path === '/auth/me') finalEndpoint = `/auth/me.php${qs}`;
+    else if (path === '/profile' || path === '/profile/update') finalEndpoint = `/profile/update.php${qs}`;
+    else if (path === '/profile/get') finalEndpoint = `/profile/get.php${qs}`;
+    else if (path === '/papers' || path === '/papers/list') finalEndpoint = `/papers/list.php${qs}`;
+    else if (path === '/papers/upload') finalEndpoint = `/papers/upload.php${qs}`;
+    else if (path === '/papers/view') finalEndpoint = `/papers/view.php${qs}`;
+    else if (path === '/admin/login') finalEndpoint = `/admin/login.php${qs}`;
+    else if (path === '/admin/logout') finalEndpoint = `/admin/logout.php${qs}`;
+    else if (path === '/admin/me') finalEndpoint = `/admin/me.php${qs}`;
+    else if (path === '/admin/dashboard') finalEndpoint = `/admin/dashboard.php${qs}`;
+    else if (path === '/admin/users') finalEndpoint = `/admin/users.php${qs}`;
+    else if (path === '/admin/user') finalEndpoint = `/admin/user.php${qs}`;
+    else if (path === '/admin/papers') finalEndpoint = `/admin/papers.php${qs}`;
+    else if (path === '/admin/reject-paper') finalEndpoint = `/admin/reject-paper.php${qs}`;
+    else if (path === '/admin/suspend-user') finalEndpoint = `/admin/suspend-user.php${qs}`;
+    else if (path === '/admin/activate-user') finalEndpoint = `/admin/activate-user.php${qs}`;
   }
 
   const response = await fetch(`${API_BASE}${finalEndpoint}`, {
@@ -312,23 +328,25 @@ export const adminApi = {
   },
 
   async rejectPaper(paperId: number | string, rejection_reason: string) {
-    const res = await request<{ success: boolean; message: string }>(`/admin/papers/${paperId}/reject`, {
+    const res = await request<{ success: boolean; message: string }>('/admin/reject-paper.php', {
       method: 'POST',
-      body: JSON.stringify({ rejection_reason }),
+      body: JSON.stringify({ paper_id: Number(paperId), rejection_reason, reason: rejection_reason }),
     });
     return res;
   },
 
   async suspendUser(userId: number | string) {
-    const res = await request<{ success: boolean; message: string }>(`/admin/users/${userId}/suspend`, {
+    const res = await request<{ success: boolean; message: string }>('/admin/suspend-user.php', {
       method: 'POST',
+      body: JSON.stringify({ user_id: Number(userId) }),
     });
     return res;
   },
 
   async activateUser(userId: number | string) {
-    const res = await request<{ success: boolean; message: string }>(`/admin/users/${userId}/activate`, {
+    const res = await request<{ success: boolean; message: string }>('/admin/activate-user.php', {
       method: 'POST',
+      body: JSON.stringify({ user_id: Number(userId) }),
     });
     return res;
   },

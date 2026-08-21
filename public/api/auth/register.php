@@ -45,9 +45,21 @@ if ($userDb) {
         $userId = $userDb->lastInsertId();
 
         // Create empty profile record in user_profiles
-        $defaultName = 'Student ' . substr($phone, -4);
-        $stmt = $userDb->prepare("INSERT INTO user_profiles (user_id, name, created_at) VALUES (?, ?, NOW())");
-        $stmt->execute([$userId, $defaultName]);
+        $stmt = $userDb->prepare("INSERT INTO user_profiles (user_id, name, created_at) VALUES (?, '', NOW())");
+        $stmt->execute([$userId]);
+
+        // Generate session JWT
+        $token = generate_jwt([
+            'user_id' => $userId,
+            'phone_number' => $phone,
+            'role' => 'student'
+        ]);
+
+        // Store session token in user_sessions table
+        try {
+            $sessStmt = $userDb->prepare("INSERT INTO user_sessions (user_id, session_token, expires_at, created_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 DAY), NOW())");
+            $sessStmt->execute([$userId, $token]);
+        } catch (\Throwable $e) {}
 
         $userData = [
             'id' => $userId,
@@ -57,7 +69,7 @@ if ($userDb) {
             'role' => 'student',
             'created_at' => date('Y-m-d H:i:s'),
             'profile' => [
-                'name' => $defaultName,
+                'name' => '',
                 'profession' => '',
                 'address' => '',
                 'city' => '',
@@ -65,13 +77,6 @@ if ($userDb) {
                 'age' => null
             ]
         ];
-
-        // Generate session JWT
-        $token = generate_jwt([
-            'user_id' => $userId,
-            'phone_number' => $phone,
-            'role' => 'student'
-        ]);
 
         send_json_response([
             'message' => 'Account registered successfully.',

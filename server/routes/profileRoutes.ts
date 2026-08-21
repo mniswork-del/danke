@@ -99,11 +99,21 @@ const handleProfileUpdate = async (req: AuthRequest, res: Response) => {
           [trimmedName, trimmedProfession, trimmedAddress, trimmedCity, trimmedEmail, parsedAge, userId]
         );
       } else {
-        await userPool.query(
-          `INSERT INTO user_profiles (user_id, name, profession, address, city, phone_number, email, age) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, trimmedName, trimmedProfession, trimmedAddress, trimmedCity, req.user!.phone_number, trimmedEmail, parsedAge]
-        );
+        try {
+          await userPool.query(
+            `INSERT INTO user_profiles (user_id, name, profession, address, city, email, age) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [userId, trimmedName, trimmedProfession, trimmedAddress, trimmedCity, trimmedEmail, parsedAge]
+          );
+        } catch (insertErr) {
+          try {
+            await userPool.query(
+              `INSERT INTO user_profiles (user_id, name, profession, address, city, phone_number, email, age) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [userId, trimmedName, trimmedProfession, trimmedAddress, trimmedCity, req.user!.phone_number, trimmedEmail, parsedAge]
+            );
+          } catch (_) {}
+        }
       }
 
       // Update profile_completed flag on users table

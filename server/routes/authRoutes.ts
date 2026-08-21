@@ -43,10 +43,19 @@ authRouter.post(['/register', '/register.php'], async (req: AuthRequest, res: Re
       const userId = result.insertId;
 
       // Create initial profile record
-      await userPool.query(
-        'INSERT INTO user_profiles (user_id, phone_number) VALUES (?, ?)',
-        [userId, cleanPhone]
-      );
+      try {
+        await userPool.query(
+          'INSERT INTO user_profiles (user_id, name) VALUES (?, ?)',
+          [userId, '']
+        );
+      } catch (profileErr) {
+        try {
+          await userPool.query(
+            'INSERT INTO user_profiles (user_id, phone_number) VALUES (?, ?)',
+            [userId, cleanPhone]
+          );
+        } catch (_) {}
+      }
 
       const token = generateUserToken({ userId, phone: cleanPhone, role: 'student' });
       res.cookie('user_token', token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'lax' });

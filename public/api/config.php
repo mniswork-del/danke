@@ -61,6 +61,8 @@ function get_bearer_token() {
         $headers = trim($_SERVER["Authorization"]);
     } else if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
         $headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
+    } else if (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $headers = trim($_SERVER["REDIRECT_HTTP_AUTHORIZATION"]);
     } elseif (function_exists('apache_request_headers')) {
         $requestHeaders = apache_request_headers();
         $requestHeaders = array_combine(array_map('ucwords', array_keys($requestHeaders)), array_values($requestHeaders));
@@ -73,7 +75,21 @@ function get_bearer_token() {
         if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
             return $matches[1];
         }
+        return $headers;
     }
+
+    // Fallback to token parameter in query or body
+    if (!empty($_GET['token'])) {
+        return trim($_GET['token']);
+    }
+    if (!empty($_POST['token'])) {
+        return trim($_POST['token']);
+    }
+    $rawInput = json_decode(file_get_contents('php://input'), true);
+    if (!empty($rawInput['token'])) {
+        return trim($rawInput['token']);
+    }
+
     return null;
 }
 

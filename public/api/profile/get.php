@@ -56,17 +56,17 @@ if ($userDb) {
     send_json_response([
         'user' => [
             'id' => $userId,
-            'phone_number' => $auth['phone_number'] ?? '9876543210',
+            'phone_number' => $auth['phone_number'] ?? '',
             'status' => 'active',
-            'profile_completed' => 1,
+            'profile_completed' => 0,
             'created_at' => date('Y-m-d H:i:s'),
             'profile' => [
-                'name' => 'Active Student',
-                'profession' => 'Student',
-                'address' => 'Main Campus',
-                'city' => 'Delhi',
-                'email' => 'student@universitytree.in',
-                'age' => 20
+                'name' => '',
+                'profession' => '',
+                'address' => '',
+                'city' => '',
+                'email' => '',
+                'age' => null
             ]
         ]
     ]);
