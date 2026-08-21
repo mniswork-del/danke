@@ -14,7 +14,7 @@ import {
   initStorage,
   calculateProfileCompletion,
 } from './lib/storage';
-import { authApi, paperApi } from './lib/api';
+import { authApi, paperApi, profileApi } from './lib/api';
 import {
   getUserFromFirestore,
   getPapersFromFirestore,
@@ -79,7 +79,7 @@ const getRouteFromUrl = () => {
   if (path.startsWith('/how-it-works') || hash.startsWith('how-it-works')) {
     return { tab: 'how-it-works', paperId, category };
   }
-  if (path.startsWith('/dashboard') || path.startsWith('/profile') || path.startsWith('/my-uploads') || path.startsWith('/my-account') || hash.startsWith('dashboard') || hash.startsWith('profile')) {
+  if (path.startsWith('/dashboard') || path.startsWith('/profile') || path.startsWith('/my-uploads') || path.startsWith('/my-account') || hash.startsWith('dashboard') || hash.startsWith('profile')[...]
     return { tab: 'dashboard', paperId, category };
   }
 
@@ -319,8 +319,24 @@ export default function App() {
     navigateToTab('home');
   };
 
-  const handleLoginSuccess = (user: User) => {
+  const handleLoginSuccess = async (user: User) => {
     setCurrentUserState(user);
+    
+    // NEW: Sync user profile to database immediately after login
+    try {
+      await profileApi.sync({
+        name: user.name,
+        email: user.email,
+        city: user.city || user.place,
+        profession: user.institution || user.course,
+        address: '',
+        age: null,
+        phone_number: user.mobile,
+      });
+    } catch (err) {
+      console.warn('Profile sync failed but login succeeded:', err);
+    }
+    
     refreshAppData();
     
     // Check if user has incomplete profile details (Name, Email, DOB, Place)
