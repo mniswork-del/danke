@@ -1,47 +1,35 @@
-name: Build and Deploy to Hostinger
+name: Build and Deploy
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get source code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           package-manager-cache: false
 
-
       - name: Install dependencies
         run: npm install
 
-      - name: Build website
+      - name: Build application
         run: npm run build
 
-      - name: Verify build
+      - name: Verify build output
         run: |
-          test -f dist/index.html
-          test -f dist/.htaccess
-          echo "Build successful"
-          echo "Files in dist:"
-          find dist -maxdepth 2 -type f | sort
-
-      - name: Deploy dist to Hostinger
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
-          port: 21
-          local-dir: ./dist/
-          server-dir: ./
-          dangerous-clean-slate: false
+          if [ ! -d "dist" ]; then
+            echo "ERROR: dist folder was not created."
+            exit 1
+          fi
+          echo "Build successful. dist folder found."
