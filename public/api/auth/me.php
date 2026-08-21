@@ -40,11 +40,11 @@ if ($userDb) {
             'role' => 'student',
             'created_at' => $user['created_at'],
             'profile' => [
-                'name' => $user['name'] ?: ('Student ' . substr($user['phone_number'], -4)),
-                'profession' => $user['profession'] ?: '',
-                'address' => $user['address'] ?: '',
-                'city' => $user['city'] ?: '',
-                'email' => $user['email'] ?: '',
+                'name' => $user['name'] ?? '',
+                'profession' => $user['profession'] ?? '',
+                'address' => $user['address'] ?? '',
+                'city' => $user['city'] ?? '',
+                'email' => $user['email'] ?? '',
                 'age' => $user['age'] ? (int)$user['age'] : null
             ]
         ];
@@ -59,18 +59,18 @@ if ($userDb) {
     send_json_response([
         'user' => [
             'id' => $userId,
-            'phone_number' => $auth['phone_number'] ?? '9876543210',
+            'phone_number' => $auth['phone_number'] ?? '',
             'status' => 'active',
-            'profile_completed' => 1,
+            'profile_completed' => 0,
             'role' => 'student',
             'created_at' => date('Y-m-d H:i:s'),
             'profile' => [
-                'name' => 'Active Student',
-                'profession' => 'Engineering Student',
-                'address' => 'University Campus',
-                'city' => 'Delhi',
-                'email' => 'student@universitytree.in',
-                'age' => 21
+                'name' => '',
+                'profession' => '',
+                'address' => '',
+                'city' => '',
+                'email' => '',
+                'age' => null
             ]
         ]
     ]);

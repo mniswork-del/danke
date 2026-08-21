@@ -78,11 +78,11 @@ if ($userDb) {
             'role' => 'student',
             'created_at' => $user['created_at'],
             'profile' => [
-                'name' => $user['name'] ?: ('Student ' . substr($user['phone_number'], -4)),
-                'profession' => $user['profession'] ?: '',
-                'address' => $user['address'] ?: '',
-                'city' => $user['city'] ?: '',
-                'email' => $user['email'] ?: '',
+                'name' => $user['name'] ?? '',
+                'profession' => $user['profession'] ?? '',
+                'address' => $user['address'] ?? '',
+                'city' => $user['city'] ?? '',
+                'email' => $user['email'] ?? '',
                 'age' => $user['age'] ? (int)$user['age'] : null
             ]
         ];
@@ -103,16 +103,16 @@ if ($userDb) {
         'id' => $userId,
         'phone_number' => $phone,
         'status' => 'active',
-        'profile_completed' => 1,
+        'profile_completed' => 0,
         'role' => 'student',
         'created_at' => date('Y-m-d H:i:s'),
         'profile' => [
-            'name' => 'Student ' . substr($phone, -4),
-            'profession' => 'Student',
-            'address' => 'Academic Campus',
-            'city' => 'New Delhi',
-            'email' => 'student.' . substr($phone, -4) . '@edu.in',
-            'age' => 20
+            'name' => '',
+            'profession' => '',
+            'address' => '',
+            'city' => '',
+            'email' => '',
+            'age' => null
         ]
     ];
     $token = generate_jwt([
