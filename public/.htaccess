@@ -6,8 +6,8 @@
   RewriteCond %{HTTP:Authorization} .
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-  # Never redirect /api routes to index.html (case-insensitive)
-  RewriteRule ^api/ - [L,NC]
+  # Never redirect /api routes to index.html
+  RewriteRule ^api/ - [L]
 
   # If requested file or directory exists, serve it directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -15,5 +15,5 @@
   RewriteRule ^ - [L]
 
   # Direct all other routes to index.html for client-side routing
-  RewriteRule . /index.html [L]
+  RewriteRule ^ index.html [L]
 </IfModule>
