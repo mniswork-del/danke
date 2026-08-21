@@ -41,6 +41,7 @@ import { AuthModal } from './components/AuthModal';
 import { ProfileCompletionModal } from './components/ProfileCompletionModal';
 import { ReportModal } from './components/ReportModal';
 import { Footer } from './components/Footer';
+import { WhatsAppWidget } from './components/WhatsAppWidget';
 
 // Helper to extract tab and target item from current URL
 const getRouteFromUrl = () => {
@@ -525,6 +526,9 @@ export default function App() {
         onNavigate={navigateToTab}
         onOpenUpload={() => setIsUploadOpen(true)}
       />
+
+      {/* Floating WhatsApp Widget */}
+      <WhatsAppWidget />
 
       {/* Global Modals */}
       <SearchModal
